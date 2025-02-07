@@ -14,6 +14,9 @@ namespace VirtualDriverApp
         public Form1()
         {
             InitializeComponent();
+
+            // 设置窗体启动时自动居中
+            this.StartPosition = FormStartPosition.CenterScreen;
         }
 
 
