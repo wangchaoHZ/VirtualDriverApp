@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
@@ -106,9 +107,9 @@ namespace VirtualDriverApp
 
             if (slave1.GetFinalCurrent() > 100)
             {
-                int rdv = random.Next(-10, 11);
+                int rdv = random.Next(0, 11);
                 slave1_last_randomv = (slave1_last_randomv > 0) ? -Math.Sign(rdv) * rdv : Math.Sign(rdv) * rdv;
-                ushort rv = (ushort)(slave1.GetFinalCurrent() + slave1_last_randomv);
+                ushort rv = (ushort)(slave1.GetFinalCurrent() + random.Next(0, 11));
 
                 if (checkBox1.Checked || checkBox2.Checked)
                 {
@@ -129,9 +130,9 @@ namespace VirtualDriverApp
 
             if (slave2.GetFinalCurrent() > 100)
             {
-                int rdv = random.Next(-10, 11);
+                int rdv = random.Next(0, 11);
                 slave2_last_randomv = (slave2_last_randomv > 0) ? -Math.Sign(rdv) * rdv : Math.Sign(rdv) * rdv;
-                ushort rv = (ushort)(slave2.GetFinalCurrent() + slave2_last_randomv);
+                ushort rv = (ushort)(slave2.GetFinalCurrent() + random.Next(0, 11));
 
                 if (checkBox4.Checked || checkBox3.Checked)
                 {
@@ -152,9 +153,9 @@ namespace VirtualDriverApp
 
             if (slave3.GetFinalCurrent() > 100)
             {
-                int rdv = random.Next(-10, 11);
+                int rdv = random.Next(0, 11);
                 slave3_last_randomv = (slave3_last_randomv > 0) ? -Math.Sign(rdv) * rdv : Math.Sign(rdv) * rdv;
-                ushort rv = (ushort)(slave3.GetFinalCurrent() + slave3_last_randomv);
+                ushort rv = (ushort)(slave3.GetFinalCurrent() + random.Next(0, 11));
 
                 if (checkBox6.Checked || checkBox5.Checked)
                 {
@@ -175,9 +176,10 @@ namespace VirtualDriverApp
 
             if (slave4.GetFinalCurrent() > 100)
             {
-                int rdv = random.Next(-10, 11);
+                int rdv = random.Next(0, 11);
                 slave4_last_randomv = (slave4_last_randomv > 0) ? -Math.Sign(rdv) * rdv : Math.Sign(rdv) * rdv;
-                ushort rv = (ushort)(slave4.GetFinalCurrent() + slave4_last_randomv);
+                ushort rv = (ushort)(slave4.GetFinalCurrent() + random.Next(10, 16));
+
 
                 if (checkBox8.Checked || checkBox7.Checked)
                 {
@@ -233,6 +235,11 @@ namespace VirtualDriverApp
         private void button2_Click(object sender, EventArgs e)
         {
             Application.Exit();
+        }
+
+        private void label9_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
@@ -329,33 +336,33 @@ public class ModbusRtuSlave
     private void GradualFrequencyChange()
     {
         float startFrequency = currentFrequency;
-        float changeDuration = 1.2f;
+        float changeDuration = 1.0f;
 
-        if (Math.Abs(targetFrequency - startFrequency) > 20 * 100)
-        {
-            changeDuration = 6.5f;
-        }
-        else if (Math.Abs(targetFrequency - startFrequency) > 10 * 100 && Math.Abs(targetFrequency - startFrequency) < 20 * 100)
-        {
-            changeDuration = 4.5f;
-        }
-        else if (Math.Abs(targetFrequency - startFrequency) > 5 * 100 && Math.Abs(targetFrequency - startFrequency) < 10 * 100)
-        {
-            changeDuration = 3.3f;
-        }
-        else if (Math.Abs(targetFrequency - startFrequency) > 250 && Math.Abs(targetFrequency - startFrequency) < 500)
-        {
-            changeDuration = 2.5f;
-        }
-        else
-        {
-            changeDuration = 1.3f;
-        }
+        //if (Math.Abs(targetFrequency - startFrequency) > 20 * 100)
+        //{
+        //    changeDuration = 3.5f;
+        //}
+        //else if (Math.Abs(targetFrequency - startFrequency) > 10 * 100 && Math.Abs(targetFrequency - startFrequency) < 20 * 100)
+        //{
+        //    changeDuration = 2.5f;
+        //}
+        //else if (Math.Abs(targetFrequency - startFrequency) > 5 * 100 && Math.Abs(targetFrequency - startFrequency) < 10 * 100)
+        //{
+        //    changeDuration = 1.5f;
+        //}
+        //else if (Math.Abs(targetFrequency - startFrequency) > 250 && Math.Abs(targetFrequency - startFrequency) < 500)
+        //{
+        //    changeDuration = 1.2f;
+        //}
+        //else
+        //{
+        //    changeDuration = 1.0f;
+        //}
 
         float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
 
         // 逐步变化频率
-        for (float t = 0; t < changeDuration; t += 0.1f) // 每 0.1 秒变化一次
+        for (float t = 0; t < changeDuration; t += 0.2f) // 每 0.1 秒变化一次
         {
             currentFrequency = startFrequency + frequencyChangeRate * t;
             Console.WriteLine($"Current Frequency: {currentFrequency:F2} Hz");
@@ -391,7 +398,7 @@ public class ModbusRtuSlave
     {
         Random random = new Random();
         // 生成一个在 -50 到 50 之间的随机数
-        int randomNumber = random.Next(-3, 4);
+        int randomNumber = random.Next(1, 6);
         // 计算电流，最大频率 60Hz 对应最大电流 15A
         return (currentFrequency / maxFrequency) * maxCurrent + (float)(randomNumber);
     }
@@ -404,44 +411,70 @@ public class ModbusRtuSlave
     // DataReceived 事件处理方法
     private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
     {
-        // 每次有数据到达时触发
-        int bytesToRead = serialPort.BytesToRead;
-        byte[] request = new byte[bytesToRead];
-        serialPort.Read(request, 0, bytesToRead);
-
-        byte slaveAddress = request[0];  // 获取请求中的从站地址
-
-        if (slaveInstances.ContainsKey(slaveAddress))  // 如果字典中有该从站实例
+        try
         {
-            var slave = slaveInstances[slaveAddress];  // 获取对应的从站实例
-            byte functionCode = request[1];  // 功能码
-            byte[] response = null;
-
-            // 处理 Modbus 读保持寄存器请求（功能码 0x03）
-            if (functionCode == 0x03)
+            // 检查串口是否已打开
+            if (!serialPort.IsOpen)
             {
-                ushort startingAddress = (ushort)((request[2] << 8) + request[3]);
-                ushort quantity = (ushort)((request[4] << 8) + request[5]);
-
-                // 处理该从站的保持寄存器读取请求
-                response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
-            }
-            // 处理 Modbus 写单个寄存器请求（功能码 0x06）
-            else if (functionCode == 0x06)
-            {
-                ushort registerAddress = (ushort)((request[2] << 8) + request[3]);
-                ushort registerValue = (ushort)((request[4] << 8) + request[5]);
-
-                // 处理写单个寄存器
-                response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
+                Console.WriteLine("Serial port is not open.");
+                return;
             }
 
-            if (response != null)
+            // 确保串口缓冲区有足够的数据
+            int bytesToRead = serialPort.BytesToRead;
+            if (bytesToRead < 8)
             {
-                serialPort.Write(response, 0, response.Length);
-                Console.WriteLine("Sent response: " + BitConverter.ToString(response));
-                slave.response_log = "Sent response: " + BitConverter.ToString(response);
+                Console.WriteLine($"Not enough data available. Expected 8 bytes, got {bytesToRead} bytes.");
+                return;
             }
+
+            byte[] request = new byte[8];
+            serialPort.Read(request, 0, 8);  // 从串口读取8字节数据
+
+            // 打印接收到的字节数据
+            Console.WriteLine("Received Data: " + BitConverter.ToString(request));
+
+            byte slaveAddress = request[0];  // 获取请求中的从站地址
+
+            if (slaveInstances.ContainsKey(slaveAddress))  // 如果字典中有该从站实例
+            {
+                var slave = slaveInstances[slaveAddress];  // 获取对应的从站实例
+                byte functionCode = request[1];  // 功能码
+                byte[] response = null;
+
+                // 处理 Modbus 读保持寄存器请求（功能码 0x03）
+                if (functionCode == 0x03)
+                {
+                    ushort startingAddress = (ushort)((request[2] << 8) + request[3]);
+                    ushort quantity = (ushort)((request[4] << 8) + request[5]);
+
+                    // 处理该从站的保持寄存器读取请求
+                    response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
+                }
+                // 处理 Modbus 写单个寄存器请求（功能码 0x06）
+                else if (functionCode == 0x06)
+                {
+                    ushort registerAddress = (ushort)((request[2] << 8) + request[3]);
+                    ushort registerValue = (ushort)((request[4] << 8) + request[5]);
+
+                    // 处理写单个寄存器
+                    response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
+                }
+
+                if (response != null)
+                {
+                    serialPort.Write(response, 0, response.Length);
+                    Console.WriteLine("Sent response: " + BitConverter.ToString(response));
+                }
+            }
+        }
+        catch (IOException ioEx)
+        {
+            Console.WriteLine("IOException: " + ioEx.Message);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Exception: " + ex.Message);
         }
     }
 
