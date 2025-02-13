@@ -468,7 +468,7 @@
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(633, 58);
             this.label9.TabIndex = 10;
-            this.label9.Text = "BMS 变频器模拟终端（V1.0）";
+            this.label9.Text = "BMS 变频器模拟终端（V2.0）";
             this.label9.Click += new System.EventHandler(this.label9_Click);
             // 
             // label10

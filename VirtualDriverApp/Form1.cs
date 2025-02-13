@@ -529,20 +529,22 @@ public class ModbusRtuSlave
         // 更新寄存器值
         holdingRegisters[registerAddress] = registerValue;
 
-        byte[] response = new byte[6]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
+        byte[] response = new byte[8]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
 
         response[0] = slaveAddress;  // 从站地址
         response[1] = 0x06;  // 功能码（0x06：写单个寄存器）
         response[2] = (byte)(registerAddress >> 8);  // 寄存器地址高字节
         response[3] = (byte)(registerAddress & 0xFF);  // 寄存器地址低字节
+        Console.WriteLine(">>registerValue:" + registerValue.ToString());
         response[4] = (byte)(registerValue >> 8);  // 寄存器值高字节
+        Console.WriteLine(">>response[4]:" + response[4].ToString());
         response[5] = (byte)(registerValue & 0xFF);  // 寄存器值低字节
+        Console.WriteLine(">>response[5]:" + response[5].ToString());
 
         // 校验（CRC 检查）
         byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
         response[response.Length - 2] = crc[0];
         response[response.Length - 1] = crc[1];
-
 
         // 比较计算出的 CRC 和接收到的 CRC 是否一致
         if (!ValidateCRC(response))
