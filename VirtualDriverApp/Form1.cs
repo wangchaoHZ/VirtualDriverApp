@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Modbus;
+using NLog;
 
 namespace VirtualDriverApp
 {
@@ -21,11 +23,23 @@ namespace VirtualDriverApp
         }
 
 
+
+
         // 创建四个从站实例，分别为地址11、22、33、44
         ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
         ModbusRtuSlave slave2 = new ModbusRtuSlave(22);
         ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
         ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
+
+        private double P1_Cur;
+        private double N1_Cur;
+        private double P2_Cur;
+        private double N2_Cur;
+
+        private double PN1_PRESS_DIFF;
+        private double PN2_PRESS_DIFF;
+        private double PN1_FLOW_DIFF;
+        private double PN2_FLOW_DIFF;
 
         private static Random random = new Random();  // 随机数生成器
         public double CalculateCurrent(double frequency)
@@ -55,8 +69,23 @@ namespace VirtualDriverApp
         {
             label10.ForeColor = Color.Black;
             label10.Text = "未启动";
-            textBox9.Clear();
+            //textBox9.Clear();
             pictureBox2.Visible = false;
+
+
+            LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            //Console.WriteLine("CP")
+
+            PN1_PRESS_DIFF = 0.0;
+            PN2_PRESS_DIFF = 0.0;
+            PN1_FLOW_DIFF = 0.0;
+            PN2_FLOW_DIFF = 0.0;
+
+            textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
+            textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
+
+            textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
+            textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
             // 获取所有可用的串口名称
             string[] portNames = SerialPort.GetPortNames();
@@ -68,10 +97,21 @@ namespace VirtualDriverApp
                 comboBox1.Items.Add(port);  // 添加串口名称到 ComboBox
             }
 
+            comboBox2.Items.Clear();  // 清除原有的项
+            foreach (string port in portNames)
+            {
+                comboBox2.Items.Add(port);  // 添加串口名称到 ComboBox
+            }
+
             // 如果有可用串口，默认选择第一个串口
             if (comboBox1.Items.Count > 0)
             {
                 comboBox1.SelectedIndex = 0;
+            }
+            // 如果有可用串口，默认选择第一个串口
+            if (comboBox2.Items.Count > 0)
+            {
+                comboBox2.SelectedIndex = 0;
             }
 
             // 为每个从站设置保持寄存器的初始值
@@ -79,7 +119,8 @@ namespace VirtualDriverApp
             slave2.SetHoldingRegister(0, 0);  // 设置从站22的寄存器0初始值
             slave3.SetHoldingRegister(0, 0);  // 设置从站33的寄存器0初始值
             slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
-            timer1.Enabled = true;
+
+
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -96,6 +137,10 @@ namespace VirtualDriverApp
             button1.ForeColor = Color.Green;
             label10.ForeColor = Color.Green;
             label10.Text = "运行中";
+
+            timer1.Enabled = true;
+            Thread.Sleep(250);
+            timer2.Enabled = true;
         }
 
         private int slave1_last_randomv = 0;
@@ -104,7 +149,7 @@ namespace VirtualDriverApp
         private int slave4_last_randomv = 0;
         private void timer1_Tick(object sender, EventArgs e)
         {
-
+            //
             if (slave1.GetFinalCurrent() > 100)
             {
                 int rdv = random.Next(0, 11);
@@ -116,16 +161,23 @@ namespace VirtualDriverApp
                     if (checkBox1.Checked)
                     {
                         slave1.SetHoldingRegister(0x3004, 3000);
+                        slave1.SetHoldingRegister(0x2100, 4);
                     }
                     else
                     {
                         slave1.SetHoldingRegister(0x3004, 30);
+                        slave1.SetHoldingRegister(0x2100, 4);
                     }
                 }
                 else
                 {
                     slave1.SetHoldingRegister(0x3004, rv);
+                    slave1.SetHoldingRegister(0x2100, 1);
                 }
+            }
+            else
+            {
+                slave1.SetHoldingRegister(0x2100, 3);
             }
 
             if (slave2.GetFinalCurrent() > 100)
@@ -139,16 +191,23 @@ namespace VirtualDriverApp
                     if (checkBox4.Checked)
                     {
                         slave2.SetHoldingRegister(0x3004, 3000);
+
                     }
                     else
                     {
                         slave2.SetHoldingRegister(0x3004, 30);
                     }
+                    slave2.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave2.SetHoldingRegister(0x3004, rv);
+                    slave2.SetHoldingRegister(0x2100, 1);
                 }
+            }
+            else
+            {
+                slave2.SetHoldingRegister(0x2100, 3);
             }
 
             if (slave3.GetFinalCurrent() > 100)
@@ -167,11 +226,17 @@ namespace VirtualDriverApp
                     {
                         slave3.SetHoldingRegister(0x3004, 30);
                     }
+                    slave3.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave3.SetHoldingRegister(0x3004, rv);
+                    slave3.SetHoldingRegister(0x2100, 1);
                 }
+            }
+            else
+            {
+                slave3.SetHoldingRegister(0x2100, 3);
             }
 
             if (slave4.GetFinalCurrent() > 100)
@@ -191,45 +256,44 @@ namespace VirtualDriverApp
                     {
                         slave4.SetHoldingRegister(0x3004, 30);
                     }
+                    slave4.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave4.SetHoldingRegister(0x3004, rv);
+                    slave4.SetHoldingRegister(0x2100, 1);
                 }
+            }
+            else
+            {
+                slave4.SetHoldingRegister(0x2100, 3);
             }
 
             textBox1.Text = ((double)slave1.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox2.Text = ((double)slave1.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
+            P1_Cur = (double)slave1.GetHoldingRegister(0x3004) / 100.0;
+
 
             textBox4.Text = ((double)slave2.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox3.Text = ((double)slave2.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
+            N1_Cur = (double)slave2.GetHoldingRegister(0x3004) / 100.0;
 
             textBox8.Text = ((double)slave3.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox7.Text = ((double)slave3.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
+            P2_Cur = (double)slave3.GetHoldingRegister(0x3004) / 100.0;
 
             textBox6.Text = ((double)slave4.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox5.Text = ((double)slave4.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
+            N2_Cur = (double)slave4.GetHoldingRegister(0x3004) / 100.0;
 
-            if (slave1.GetCurentLogString().Length > 0)
-            {
-                textBox9.Text += "P1:" + slave1.GetCurentLogString() + "\r\n";
-            }
-            if (slave2.GetCurentLogString().Length > 0)
-            {
-                textBox9.Text += "N1:" + slave2.GetCurentLogString() + "\r\n";
-            }
-            if (slave3.GetCurentLogString().Length > 0)
-            {
-                textBox9.Text += "P2:" + slave3.GetCurentLogString() + "\r\n";
-            }
-            if (slave4.GetCurentLogString().Length > 0)
-            {
-                textBox9.Text += "N2:" + slave4.GetCurentLogString() + "\r\n";
-            }
+            textBox22.Text = textBox22.Text + "P1 Current:" + textBox2.Text + "\r\n";
+            textBox22.Text = textBox22.Text + "N1 Current:" + textBox3.Text + "\r\n";
+            textBox22.Text = textBox22.Text + "P2 Current:" + textBox7.Text + "\r\n";
+            textBox22.Text = textBox22.Text + "N2 Current:" + textBox5.Text + "\r\n";
 
-            if (textBox9.Lines.Length > 9)
+            if (textBox22.Lines.Length > 40)
             {
-                textBox9.Clear();
+                textBox22.Clear();
             }
         }
         private void button2_Click(object sender, EventArgs e)
@@ -241,6 +305,325 @@ namespace VirtualDriverApp
         {
 
         }
+
+        private void textBox14_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private async void timer2_Tick(object sender, EventArgs e)
+        {
+            double flow_max = 60.0; double flow_min = 0.0;
+            double press_max = 0.28; double press_min = 0.0;
+
+            // 设置从站地址、寄存器地址和要写入的值
+            //string portName = "COM16";  // 根据实际情况修改串口号
+            string portName = comboBox2.SelectedItem?.ToString();
+            byte slaveAddress = 1;  // 从站地址
+            ushort registerAddress = 10;  // 寄存器地址
+
+            double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
+            double N1_PV_Show = ((N1_Cur / 15.0) * (press_max)) + PN1_PRESS_DIFF;
+            double P2_PV_Show = ((P2_Cur / 15.0) * (press_max));
+            double N2_PV_Show = ((N2_Cur / 15.0) * (press_max)) + PN2_PRESS_DIFF;
+
+            double P1_FV_Show = ((P1_Cur / 15.0) * (flow_max));
+            double N1_FV_Show = ((N1_Cur / 15.0) * (flow_max)) + PN1_FLOW_DIFF;
+            double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
+            double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max)) + PN2_FLOW_DIFF;
+
+
+
+
+            //textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
+            //textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
+
+            //textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
+            //textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
+
+            textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
+            textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
+
+            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
+
+            textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+            textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
+
+            LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
+
+            textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
+            textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+
+            LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+
+            textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+            textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+
+            LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
+            LogHelper.Logger.Info("---------------------------------------------");
+
+            double flow_sensor_max = 70.0;
+            double press_sensor_max = 0.34;
+
+            ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+            ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+            ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+            ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+
+            ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+            ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+            ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+            ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+
+            // 发送 Modbus 请求到一个新线程
+            await Task.Run(() =>
+            {
+                SendModbusRequest(portName, 10, P1_PV_SET);
+                SendModbusRequest(portName, 11, N1_PV_SET);
+                SendModbusRequest(portName, 14, P2_PV_SET);
+                SendModbusRequest(portName, 15, N2_PV_SET);
+                SendModbusRequest(portName, 12, P1_FV_SET);
+                SendModbusRequest(portName, 13, N1_FV_SET);
+                SendModbusRequest(portName, 16, P2_FV_SET);
+                SendModbusRequest(portName, 17, N2_FV_SET);
+            });
+        }
+
+        // 封装发送 Modbus 请求的代码
+        private void SendModbusRequest(string portName, ushort registerAddress, ushort value)
+        {
+            // 构建 Modbus RTU 写单个寄存器请求帧
+            byte[] requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(0x01, registerAddress, value);
+
+            // 发送数据帧
+            ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        }
+
+
+        private void textBox11_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (checkBox9.Checked)
+                {
+                    PN1_PRESS_DIFF = -Convert.ToDouble(textBox11.Text);
+                }
+                else
+                {
+                    PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
+                }
+
+                Console.WriteLine("转换成功: " + PN1_PRESS_DIFF);
+            }
+            catch (FormatException)
+            {
+                // 捕获转换失败的异常
+                Console.WriteLine("无效的数字格式");
+            }
+            catch (Exception ex)
+            {
+                // 其他异常
+                Console.WriteLine("发生错误: " + ex.Message);
+            }
+        }
+
+        private void textBox12_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (checkBox10.Checked)
+                {
+                    PN1_FLOW_DIFF = -Convert.ToDouble(textBox12.Text);
+                }
+                else
+                {
+                    PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
+                }
+                Console.WriteLine("转换成功: " + PN1_FLOW_DIFF);
+            }
+            catch (FormatException)
+            {
+                // 捕获转换失败的异常
+                Console.WriteLine("无效的数字格式");
+            }
+            catch (Exception ex)
+            {
+                // 其他异常
+                Console.WriteLine("发生错误: " + ex.Message);
+            }
+        }
+
+        private void textBox17_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (checkBox11.Checked)
+                {
+                    PN2_PRESS_DIFF = -Convert.ToDouble(textBox17.Text);
+                }
+                else
+                {
+                    PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
+                }
+                Console.WriteLine("转换成功: " + PN2_PRESS_DIFF);
+            }
+            catch (FormatException)
+            {
+                // 捕获转换失败的异常
+                Console.WriteLine("无效的数字格式");
+            }
+            catch (Exception ex)
+            {
+                // 其他异常
+                Console.WriteLine("发生错误: " + ex.Message);
+            }
+        }
+
+        private void textBox20_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (checkBox12.Checked)
+                {
+                    PN2_FLOW_DIFF = -Convert.ToDouble(textBox20.Text);
+                }
+                else
+                {
+                    PN2_FLOW_DIFF = Convert.ToDouble(textBox20.Text);
+                }
+                Console.WriteLine("转换成功: " + PN2_FLOW_DIFF);
+            }
+            catch (FormatException)
+            {
+                // 捕获转换失败的异常
+                Console.WriteLine("无效的数字格式");
+            }
+            catch (Exception ex)
+            {
+                // 其他异常
+                Console.WriteLine("发生错误: " + ex.Message);
+            }
+        }
+
+        private void checkBox9_CheckedChanged(object sender, EventArgs e)
+        {
+            PN1_PRESS_DIFF = -PN1_PRESS_DIFF;
+        }
+
+        private void checkBox10_CheckedChanged(object sender, EventArgs e)
+        {
+            PN1_FLOW_DIFF = -PN1_FLOW_DIFF;
+        }
+
+        private void checkBo11_CheckedChanged(object sender, EventArgs e)
+        {
+            PN2_PRESS_DIFF = -PN2_PRESS_DIFF;
+        }
+
+        private void checkBox12_CheckedChanged(object sender, EventArgs e)
+        {
+            PN2_FLOW_DIFF = -PN2_FLOW_DIFF;
+        }
+
+
+
+
+
+        //private void timer2_Tick(object sender, EventArgs e)
+        //{
+        //    double flow_max = 60.0; double flow_min = 0.0;
+        //    double press_max = 0.28; double press_min = 0.0;
+
+        //    // 设置从站地址、寄存器地址和要写入的值
+        //    string portName = "COM16";  // 根据实际情况修改串口号
+        //    byte slaveAddress = 1;  // 从站地址
+        //    ushort registerAddress = 10;  // 寄存器地址
+        //    //ushort value = 1234;  // 要写入的值
+
+        //    double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
+        //    //
+        //    double N1_PV_Show = ((N1_Cur / 15.0) * (press_max));
+        //    //
+        //    double P2_PV_Show = ((P2_Cur / 15.0) * (press_max));
+        //    //
+        //    double N2_PV_Show = ((N2_Cur / 15.0) * (press_max));
+
+        //    double P1_FV_Show = ((P1_Cur / 15.0) * (flow_max));
+        //    //
+        //    double N1_FV_Show = ((N1_Cur / 15.0) * (flow_max));
+        //    //
+        //    double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
+        //    //
+        //    double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max));
+
+        //    textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
+        //    textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
+
+        //    textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+        //    textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
+
+        //    textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
+        //    textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+
+        //    textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+        //    textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+
+        //    double flow_sensor_max = 70.0;
+        //    double press_sensor_max = 0.34;
+
+        //    ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+        //    ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+        //    ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+        //    ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+
+        //    ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+        //    ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+        //    ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+        //    ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    byte[] requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 10, P1_PV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 11, N1_PV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 14, P2_PV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 15, N2_PV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 12, P1_FV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 13, N1_FV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 16, P2_FV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+
+        //    // 构建 Modbus RTU 写单个寄存器请求帧
+        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 17, N2_FV_SET);
+        //    // 发送数据帧
+        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        //}
     }
 }
 
@@ -597,4 +980,131 @@ public class ModbusRtuSlave
         // 比较计算出的 CRC 和响应中的 CRC
         return receivedCRC.SequenceEqual(calculatedCRC);
     }
+}
+
+namespace Modbus
+{
+    public class ModbusRTUSender
+    {
+        // 构建 Modbus RTU 写多个寄存器的请求帧（功能码 0x10）
+        public static byte[] BuildWriteMultipleRegistersRequest(byte slaveAddress, ushort startAddress, ushort[] data)
+        {
+            byte[] frame = new byte[5 + data.Length * 2 + 2];
+
+            frame[0] = slaveAddress; // 从站地址
+            frame[1] = 0x10; // 功能码：16 (Write Multiple Registers)
+            frame[2] = (byte)(startAddress >> 8); // 起始地址高字节
+            frame[3] = (byte)(startAddress & 0xFF); // 起始地址低字节
+            frame[4] = (byte)(data.Length >> 8); // 寄存器数量高字节
+            frame[5] = (byte)(data.Length & 0xFF); // 寄存器数量低字节
+            frame[6] = (byte)(data.Length * 2); // 字节数量，2个字节表示1个寄存器
+
+            int index = 7;
+            foreach (var value in data)
+            {
+                frame[index++] = (byte)(value >> 8); // 数据高字节
+                frame[index++] = (byte)(value & 0xFF); // 数据低字节
+            }
+
+            // 计算CRC
+            ushort crc = CalculateCRC(frame, frame.Length - 2);
+            frame[frame.Length - 2] = (byte)(crc & 0xFF); // CRC低字节
+            frame[frame.Length - 1] = (byte)(crc >> 8); // CRC高字节
+
+            return frame;
+        }
+
+        // 构建 Modbus RTU 写单个寄存器的请求帧（功能码 0x06）
+        public static byte[] BuildWriteSingleRegisterRequest(byte slaveAddress, ushort registerAddress, ushort value)
+        {
+            byte[] frame = new byte[8];
+
+            frame[0] = slaveAddress; // 从站地址
+            frame[1] = 0x06; // 功能码：6 (Write Single Register)
+            frame[2] = (byte)(registerAddress >> 8); // 寄存器地址高字节
+            frame[3] = (byte)(registerAddress & 0xFF); // 寄存器地址低字节
+            frame[4] = (byte)(value >> 8); // 数据高字节
+            frame[5] = (byte)(value & 0xFF); // 数据低字节
+
+            // 计算CRC
+            ushort crc = CalculateCRC(frame, frame.Length - 2);
+            frame[frame.Length - 2] = (byte)(crc & 0xFF); // CRC低字节
+            frame[frame.Length - 1] = (byte)(crc >> 8); // CRC高字节
+
+            return frame;
+        }
+
+        // CRC16计算函数
+        public static ushort CalculateCRC(byte[] data, int length)
+        {
+            ushort crc = 0xFFFF;
+            for (int i = 0; i < length; i++)
+            {
+                crc ^= data[i];
+                for (int j = 8; j > 0; j--)
+                {
+                    if ((crc & 0x0001) != 0)
+                    {
+                        crc >>= 1;
+                        crc ^= 0xA001;
+                    }
+                    else
+                    {
+                        crc >>= 1;
+                    }
+                }
+            }
+            return crc;
+        }
+
+        // 串口参数设置
+        public static SerialPort SetupSerialPort(string portName)
+        {
+            SerialPort serialPort = new SerialPort
+            {
+                PortName = portName,        // 设置串口号
+                BaudRate = 9600,            // 设置波特率
+                Parity = Parity.None,       // 设置奇偶校验
+                DataBits = 8,               // 设置数据位
+                StopBits = StopBits.One     // 设置停止位
+            };
+
+            return serialPort;
+        }
+
+        // 使用串口发送Modbus RTU帧
+        public static void SendModbusFrame(string portName, byte[] frame)
+        {
+            try
+            {
+                // 创建串口对象并设置参数
+                using (SerialPort serialPort = SetupSerialPort(portName))
+                {
+                    serialPort.Open(); // 打开串口
+
+                    // 发送数据
+                    serialPort.Write(frame, 0, frame.Length);
+                    Console.WriteLine("Modbus RTU 帧已发送：");
+                    foreach (var b in frame)
+                    {
+                        Console.Write($"{b:X2} ");
+                    }
+                    Console.WriteLine();
+
+                    serialPort.Close(); // 关闭串口
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("串口通信出错: " + ex.Message);
+            }
+        }
+    }
+}
+public static class LogHelper
+{
+    // 创建全局静态的 Logger 实例
+    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+    public static Logger Logger => logger;
 }
