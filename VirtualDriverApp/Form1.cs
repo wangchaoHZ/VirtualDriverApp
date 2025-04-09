@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Modbus;
+using Newtonsoft.Json;
 using NLog;
 
 namespace VirtualDriverApp
@@ -22,8 +23,17 @@ namespace VirtualDriverApp
             this.StartPosition = FormStartPosition.CenterScreen;
         }
 
+        public class ConfigLoader
+        {
+            public static AppConfig LoadConfig(string filePath)
+            {
+                if (!File.Exists(filePath))
+                    throw new FileNotFoundException("配置文件未找到", filePath);
 
-
+                string json = File.ReadAllText(filePath);
+                return JsonConvert.DeserializeObject<AppConfig>(json);
+            }
+        }
 
         // 创建四个从站实例，分别为地址11、22、33、44
         ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
@@ -67,11 +77,17 @@ namespace VirtualDriverApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            label10.ForeColor = Color.Black;
-            label10.Text = "未启动";
-            //textBox9.Clear();
-            pictureBox2.Visible = false;
+            this.FormBorderStyle = FormBorderStyle.None;
 
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppConfig.json");
+            AppConfig config = ConfigLoader.LoadConfig(configPath);
+
+            Console.WriteLine($"串口1: {config.VFBDevice.PortName}");
+            Console.WriteLine($"AI模块2地址: {config.AIModule2.IPAddress}");
+
+            timer3.Start();
+
+            hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             //Console.WriteLine("CP")
@@ -87,32 +103,6 @@ namespace VirtualDriverApp
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
             textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
-            // 获取所有可用的串口名称
-            string[] portNames = SerialPort.GetPortNames();
-
-            // 将串口名称添加到 ComboBox 中
-            comboBox1.Items.Clear();  // 清除原有的项
-            foreach (string port in portNames)
-            {
-                comboBox1.Items.Add(port);  // 添加串口名称到 ComboBox
-            }
-
-            comboBox2.Items.Clear();  // 清除原有的项
-            foreach (string port in portNames)
-            {
-                comboBox2.Items.Add(port);  // 添加串口名称到 ComboBox
-            }
-
-            // 如果有可用串口，默认选择第一个串口
-            if (comboBox1.Items.Count > 0)
-            {
-                comboBox1.SelectedIndex = 0;
-            }
-            // 如果有可用串口，默认选择第一个串口
-            if (comboBox2.Items.Count > 0)
-            {
-                comboBox2.SelectedIndex = 0;
-            }
 
             // 为每个从站设置保持寄存器的初始值
             slave1.SetHoldingRegister(0, 0);  // 设置从站11的寄存器0初始值
@@ -120,27 +110,6 @@ namespace VirtualDriverApp
             slave3.SetHoldingRegister(0, 0);  // 设置从站33的寄存器0初始值
             slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
 
-
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            string selectedPort = comboBox1.SelectedItem?.ToString();
-            // 设置串口配置
-            ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
-            Thread.Sleep(200);
-            // 启动共享的 Modbus 线程
-            ModbusRtuSlave.Start();
-
-            pictureBox2.Visible = true;
-
-            button1.ForeColor = Color.Green;
-            label10.ForeColor = Color.Green;
-            label10.Text = "运行中";
-
-            timer1.Enabled = true;
-            Thread.Sleep(250);
-            timer2.Enabled = true;
         }
 
         private int slave1_last_randomv = 0;
@@ -286,19 +255,11 @@ namespace VirtualDriverApp
             textBox5.Text = ((double)slave4.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
             N2_Cur = (double)slave4.GetHoldingRegister(0x3004) / 100.0;
 
-            textBox22.Text = textBox22.Text + "P1 Current:" + textBox2.Text + "\r\n";
-            textBox22.Text = textBox22.Text + "N1 Current:" + textBox3.Text + "\r\n";
-            textBox22.Text = textBox22.Text + "P2 Current:" + textBox7.Text + "\r\n";
-            textBox22.Text = textBox22.Text + "N2 Current:" + textBox5.Text + "\r\n";
 
-            if (textBox22.Lines.Length > 40)
-            {
-                textBox22.Clear();
-            }
         }
         private void button2_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            //Application.Exit();
         }
 
         private void label9_Click(object sender, EventArgs e)
@@ -313,12 +274,13 @@ namespace VirtualDriverApp
 
         private async void timer2_Tick(object sender, EventArgs e)
         {
+
             double flow_max = 60.0; double flow_min = 0.0;
             double press_max = 0.28; double press_min = 0.0;
 
             // 设置从站地址、寄存器地址和要写入的值
             //string portName = "COM16";  // 根据实际情况修改串口号
-            string portName = comboBox2.SelectedItem?.ToString();
+            string portName = "COM1";
             byte slaveAddress = 1;  // 从站地址
             ushort registerAddress = 10;  // 寄存器地址
 
@@ -405,11 +367,7 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox9.Checked)
-                {
-                    PN1_PRESS_DIFF = -Convert.ToDouble(textBox11.Text);
-                }
-                else
+
                 {
                     PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
                 }
@@ -432,11 +390,7 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox10.Checked)
-                {
-                    PN1_FLOW_DIFF = -Convert.ToDouble(textBox12.Text);
-                }
-                else
+
                 {
                     PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
                 }
@@ -458,11 +412,7 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox11.Checked)
-                {
-                    PN2_PRESS_DIFF = -Convert.ToDouble(textBox17.Text);
-                }
-                else
+
                 {
                     PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
                 }
@@ -484,14 +434,7 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox12.Checked)
-                {
-                    PN2_FLOW_DIFF = -Convert.ToDouble(textBox20.Text);
-                }
-                else
-                {
-                    PN2_FLOW_DIFF = Convert.ToDouble(textBox20.Text);
-                }
+                PN2_FLOW_DIFF = Convert.ToDouble(textBox20.Text);
                 Console.WriteLine("转换成功: " + PN2_FLOW_DIFF);
             }
             catch (FormatException)
@@ -526,104 +469,110 @@ namespace VirtualDriverApp
             PN2_FLOW_DIFF = -PN2_FLOW_DIFF;
         }
 
+        private void label30_Click(object sender, EventArgs e)
+        {
 
+        }
 
+        private void hslProgressColorful1_Load(object sender, EventArgs e)
+        {
 
+        }
 
-        //private void timer2_Tick(object sender, EventArgs e)
-        //{
-        //    double flow_max = 60.0; double flow_min = 0.0;
-        //    double press_max = 0.28; double press_min = 0.0;
+        private void button3_Click(object sender, EventArgs e)
+        {
+            //panel1.BackColor=Color.Lime;
+            //hslSwitch1.SwitchStatus = true;
+            //hslSwitch1.SwitchBackground = Color.Lime;
+        }
 
-        //    // 设置从站地址、寄存器地址和要写入的值
-        //    string portName = "COM16";  // 根据实际情况修改串口号
-        //    byte slaveAddress = 1;  // 从站地址
-        //    ushort registerAddress = 10;  // 寄存器地址
-        //    //ushort value = 1234;  // 要写入的值
+        private void hslSwitch8_OnSwitchChanged(object arg1, bool arg2)
+        {
 
-        //    double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
-        //    //
-        //    double N1_PV_Show = ((N1_Cur / 15.0) * (press_max));
-        //    //
-        //    double P2_PV_Show = ((P2_Cur / 15.0) * (press_max));
-        //    //
-        //    double N2_PV_Show = ((N2_Cur / 15.0) * (press_max));
+        }
 
-        //    double P1_FV_Show = ((P1_Cur / 15.0) * (flow_max));
-        //    //
-        //    double N1_FV_Show = ((N1_Cur / 15.0) * (flow_max));
-        //    //
-        //    double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
-        //    //
-        //    double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max));
+        private void hslButton1_Click(object sender, EventArgs e)
+        {
+            hslButton1.OriginalColor = Color.Lime;
+        }
 
-        //    textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
-        //    textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
+        private void timer3_Tick(object sender, EventArgs e)
+        {
+            hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        }
 
-        //    textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-        //    textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
+        private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
+        {
 
-        //    textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
-        //    textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+        }
 
-        //    textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-        //    textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+        private void checkBox10_CheckedChanged_1(object sender, EventArgs e)
+        {
 
-        //    double flow_sensor_max = 70.0;
-        //    double press_sensor_max = 0.34;
+        }
 
-        //    ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-        //    ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-        //    ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-        //    ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+        private void hslLabel1_Click(object sender, EventArgs e)
+        {
 
-        //    ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-        //    ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-        //    ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-        //    ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+        }
 
+        private void checkBox14_CheckedChanged(object sender, EventArgs e)
+        {
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    byte[] requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 10, P1_PV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        }
 
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 11, N1_PV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        }
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 14, P2_PV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        private void groupBox5_Enter(object sender, EventArgs e)
+        {
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 15, N2_PV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        }
 
+        private void hslButton8_Click(object sender, EventArgs e)
+        {
+            string selectedPort = "COM1";
+            // 设置串口配置
+            ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
+            Thread.Sleep(200);
+            // 启动共享的 Modbus 线程
+            ModbusRtuSlave.Start();
 
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 12, P1_FV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+            timer1.Enabled = true;
+            Thread.Sleep(250);
+            //timer2.Enabled = true;
+        }
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 13, N1_FV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 16, P2_FV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
+        }
+        public class SerialDeviceConfig
+        {
+            public string PortName { get; set; }
+            public int BaudRate { get; set; }
+            public int DataBits { get; set; }
+            public int StopBits { get; set; }
+            public string Parity { get; set; }
+        }
 
-        //    // 构建 Modbus RTU 写单个寄存器请求帧
-        //    requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(1, 17, N2_FV_SET);
-        //    // 发送数据帧
-        //    ModbusRTUSender.SendModbusFrame(portName, requestFrame);
-        //}
+        public class NetworkDeviceConfig
+        {
+            public string IPAddress { get; set; }
+            public int Port { get; set; }
+        }
+
+        public class AppConfig
+        {
+            public SerialDeviceConfig VFBDevice { get; set; }
+            public SerialDeviceConfig VoltDevice { get; set; }
+            public NetworkDeviceConfig AIModule1 { get; set; }
+            public NetworkDeviceConfig AIModule2 { get; set; }
+            public NetworkDeviceConfig DIModule { get; set; }
+            public NetworkDeviceConfig DOModule { get; set; }
+        }
     }
 }
 

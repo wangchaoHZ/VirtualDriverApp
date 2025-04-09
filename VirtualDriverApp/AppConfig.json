@@ -1,0 +1,32 @@
+{
+  "VFBDevice": {
+    "PortName": "COM3",
+    "BaudRate": 9600,
+    "DataBits": 8,
+    "StopBits": 1,
+    "Parity": "None"
+  },
+  "VoltDevice": {
+    "PortName": "COM3",
+    "BaudRate": 9600,
+    "DataBits": 8,
+    "StopBits": 1,
+    "Parity": "None"
+  },
+  "AIModule1": {
+    "IPAddress": "192.168.1.100",
+    "Port": 502
+  },
+  "AIModule2": {
+    "IPAddress": "192.168.1.101",
+    "Port": 502
+  },
+  "DIModule": {
+    "IPAddress": "192.168.1.102",
+    "Port": 502
+  },
+  "DOModule": {
+    "IPAddress": "192.168.1.103",
+    "Port": 502
+  }
+}
