@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using FluentModbus;
 using Modbus;
 using Newtonsoft.Json;
 using NLog;
@@ -15,10 +16,20 @@ namespace VirtualDriverApp
 {
     public partial class Form1 : Form
     {
+
+        private ModbusTcpClient AI01_ModbusClient;
+        private byte AI01_ModbusClient_ID = 5;
+
+        private ModbusTcpClient AI02_ModbusClient;
+        private byte AI02_ModbusClient_ID = 6;
+
         public Form1()
         {
             InitializeComponent();
 
+            // 创建 ModbusTcpClient 实例
+            AI01_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
+            AI02_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
             // 设置窗体启动时自动居中
             this.StartPosition = FormStartPosition.CenterScreen;
         }
@@ -41,6 +52,10 @@ namespace VirtualDriverApp
         ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
         ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
 
+        ModbusRtuSlaveVBT Volt_A_Slave = new ModbusRtuSlaveVBT(1);
+        ModbusRtuSlaveVBT Volt_B_Slave = new ModbusRtuSlaveVBT(2);
+
+
         private double P1_Cur;
         private double N1_Cur;
         private double P2_Cur;
@@ -50,6 +65,276 @@ namespace VirtualDriverApp
         private double PN2_PRESS_DIFF;
         private double PN1_FLOW_DIFF;
         private double PN2_FLOW_DIFF;
+
+        private double A_ES_VOLT_BASE = 23.12;
+        private double B_ES_VOLT_BASE = 23.16;
+
+        private double A_OCV_VOLT_BASE = 1.3583;
+        private double B_OCV_VOLT_BASE = 1.3587;
+
+        private double[] A_ES_VOLT = new double[6];
+        private double A_OCV;
+        private double[] B_ES_VOLT = new double[6];
+        private double B_OCV;
+
+        private ushort A_CURRENT_VOLT;
+        private ushort B_CURRENT_VOLT;
+
+        private float Total_Volt = 0;
+        private float Total_Power = 0;
+
+        //0:空转 1:充电 2:放电 
+        private ushort PCS_DIRECT = 0;
+
+        private int ConvertToCurrentVolt(float aCurrent)
+        {
+            double scaleFactor = 4000.0 / 1000.0;
+            double result = aCurrent * scaleFactor;
+
+            return (int)result;
+        }
+
+        private void Update_RTU_Regs()
+        {
+            ushort A_Max_Total_V = (ushort)Math.Max((A_ES_VOLT[0] + A_ES_VOLT[1] + A_ES_VOLT[2]), (A_ES_VOLT[3] + A_ES_VOLT[4] + A_ES_VOLT[5]));
+
+            Volt_A_Slave.SetHoldingRegister(36, A_Max_Total_V);//0
+            Volt_A_Slave.SetHoldingRegister(37, (ushort)((ushort)A_ES_VOLT[0] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(38, (ushort)((ushort)A_ES_VOLT[1] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(39, (ushort)((ushort)A_ES_VOLT[2] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(40, (ushort)((ushort)A_ES_VOLT[3] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(41, (ushort)((ushort)A_ES_VOLT[4] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(42, (ushort)((ushort)A_ES_VOLT[5] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(43, 0);//7
+            Volt_A_Slave.SetHoldingRegister(44, 0);//8
+            Volt_A_Slave.SetHoldingRegister(45, A_CURRENT_VOLT);//9电流通道
+            Volt_A_Slave.SetHoldingRegister(46, (ushort)(A_OCV * 10000));//10
+            Volt_A_Slave.SetHoldingRegister(47, A_CURRENT_VOLT);//11
+
+            ushort B_Max_Total_V = (ushort)Math.Max((B_ES_VOLT[0] + B_ES_VOLT[1] + B_ES_VOLT[2]), (B_ES_VOLT[3] + B_ES_VOLT[4] + B_ES_VOLT[5]));
+
+            Volt_B_Slave.SetHoldingRegister(36, B_Max_Total_V);
+            Volt_B_Slave.SetHoldingRegister(37, (ushort)((ushort)B_ES_VOLT[0] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(38, (ushort)((ushort)B_ES_VOLT[1] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(39, (ushort)((ushort)B_ES_VOLT[2] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(40, (ushort)((ushort)B_ES_VOLT[3] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(41, (ushort)((ushort)B_ES_VOLT[4] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(42, (ushort)((ushort)B_ES_VOLT[5] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(43, 0);
+            Volt_B_Slave.SetHoldingRegister(44, 0);
+            Volt_B_Slave.SetHoldingRegister(45, B_CURRENT_VOLT);
+            Volt_B_Slave.SetHoldingRegister(46, (ushort)(B_OCV * 10000));
+            Volt_B_Slave.SetHoldingRegister(47, B_CURRENT_VOLT);
+
+            Total_Volt = (float)(A_Max_Total_V + B_Max_Total_V);
+        }
+
+
+        private ushort GenerateRandomNumber()
+        {
+            // 生成一个范围在 0 到 10 之间的随机数
+            int randomNumber = random.Next(0, 5);
+
+            // 通过生成的数值来表示范围 -5 到 5
+            // 如果 randomNumber 小于 5，则为负数，否则为正数
+            int finalNumber = randomNumber;  // -5 到 5 之间的值
+
+            // 如果你需要返回的是 ushort 数字，建议用 Math.Abs 取绝对值（即转换为正数）
+            return (ushort)Math.Abs(finalNumber);  // 返回正数
+        }
+
+        private ushort GenerateRandomNumber03()
+        {
+            // 生成一个范围在 0 到 10 之间的随机数
+            int randomNumber = random.Next(0, 2);
+
+            // 通过生成的数值来表示范围 -5 到 5
+            // 如果 randomNumber 小于 5，则为负数，否则为正数
+            int finalNumber = randomNumber - 1;  // -5 到 5 之间的值
+
+            // 如果你需要返回的是 ushort 数字，建议用 Math.Abs 取绝对值（即转换为正数）
+            return (ushort)Math.Abs(finalNumber);  // 返回正数
+        }
+
+        private float RandomFloatGenerator()
+        {
+            Random rand = new Random();
+            float value = (float)(rand.NextDouble() * 0.8f); // 转为 float 类型
+            return value;
+        }
+
+        public void EstackAndOcvVoltInit()
+        {
+            for (int i = 0; i < A_ES_VOLT.Length; i++)
+            {
+                A_ES_VOLT[i] = A_ES_VOLT_BASE + GenerateRandomNumber03() + RandomFloatGenerator();
+                B_ES_VOLT[i] = B_ES_VOLT_BASE + GenerateRandomNumber03() + RandomFloatGenerator();
+            }
+
+            A_OCV = 1.2583;
+            B_OCV = 1.2587;
+
+            textBox24.Text = A_ES_VOLT[0].ToString("F2");
+            textBox25.Text = A_ES_VOLT[1].ToString("F2");
+            textBox27.Text = A_ES_VOLT[2].ToString("F2");
+            textBox15.Text = A_ES_VOLT[3].ToString("F2");
+            textBox23.Text = A_ES_VOLT[4].ToString("F2");
+            textBox26.Text = A_ES_VOLT[5].ToString("F2");
+            textBox34.Text = A_OCV.ToString("F4");
+
+            textBox35.Text = B_ES_VOLT[0].ToString("F2");
+            textBox33.Text = B_ES_VOLT[1].ToString("F2");
+            textBox31.Text = B_ES_VOLT[2].ToString("F2");
+            textBox32.Text = B_ES_VOLT[3].ToString("F2");
+            textBox30.Text = B_ES_VOLT[4].ToString("F2");
+            textBox29.Text = B_ES_VOLT[5].ToString("F2");
+            textBox28.Text = B_OCV.ToString("F4");
+        }
+
+        public void EstackAndOcvVoltUpdateShow()
+        {
+            for (int i = 0; i < A_ES_VOLT.Length; i++)
+            {
+                A_ES_VOLT[i] = A_ES_VOLT_BASE + GenerateRandomNumber03() / 2.0 + RandomFloatGenerator();
+                B_ES_VOLT[i] = B_ES_VOLT_BASE + GenerateRandomNumber03() / 2.0 + RandomFloatGenerator();
+            }
+
+            A_OCV = A_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
+            B_OCV = B_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
+
+            textBox24.Text = A_ES_VOLT[0].ToString("F2");
+            textBox25.Text = A_ES_VOLT[1].ToString("F2");
+            textBox27.Text = A_ES_VOLT[2].ToString("F2");
+            textBox15.Text = A_ES_VOLT[3].ToString("F2");
+            textBox23.Text = A_ES_VOLT[4].ToString("F2");
+            textBox26.Text = A_ES_VOLT[5].ToString("F2");
+            textBox34.Text = A_OCV.ToString("F4");
+
+            textBox35.Text = B_ES_VOLT[0].ToString("F2");
+            textBox33.Text = B_ES_VOLT[1].ToString("F2");
+            textBox31.Text = B_ES_VOLT[2].ToString("F2");
+            textBox32.Text = B_ES_VOLT[3].ToString("F2");
+            textBox30.Text = B_ES_VOLT[4].ToString("F2");
+            textBox29.Text = B_ES_VOLT[5].ToString("F2");
+            textBox28.Text = B_OCV.ToString("F4");
+        }
+
+        private float Branch_Cur1;
+        private float Branch_Cur2;
+
+        public void Branch_Cur_Init()
+        {
+            Branch_Cur1 = (float)2.7;
+            Branch_Cur2 = (float)2.5;
+
+            hslGauge1.Value = Branch_Cur1;
+            hslGauge2.Value = Branch_Cur2;
+        }
+
+        public void Branch_Cur_UpdateShow()
+        {
+            A_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur1);
+            B_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur2);
+
+            Console.WriteLine("-----------> Branch_Cur1:" + (short)A_CURRENT_VOLT + " Branch_Cur2:" + (short)B_CURRENT_VOLT);
+
+            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Info("支路-1(A):" + Branch_Cur1 + " 支路-2(A):" + Branch_Cur2);
+            LogHelper.Logger.Info("支路-1(SetV):" + (short)A_CURRENT_VOLT + " 支路-2(SetV):" + (short)B_CURRENT_VOLT);
+            LogHelper.Logger.Info("---------------------------------------------");
+
+            float Branch_Cur1_Show;
+            float Branch_Cur2_Show;
+
+            if (PCS_DIRECT < 2)
+            {
+                Branch_Cur1_Show = Branch_Cur1;
+                Branch_Cur2_Show = Branch_Cur2;
+            }
+            else
+            {
+                Branch_Cur1_Show = -Branch_Cur1;
+                Branch_Cur2_Show = -Branch_Cur2;
+            }
+
+            int branch_cur1 = (int)((float)(Branch_Cur1_Show + GenerateRandomNumber() * 0.712) * 10);
+            int branch_cur2 = (int)((float)(Branch_Cur2_Show + GenerateRandomNumber() * 0.712) * 10);
+
+            hslGauge1.Value = (float)(branch_cur1 / 10.0);
+            hslGauge2.Value = (float)(branch_cur2 / 10.0);
+
+            uiDigitalLabel2.Value = hslGauge1.Value + hslGauge2.Value;
+        }
+
+
+        private int P1_ELECTP_TEMP_BASE = 183;
+        private int N1_ELECTP_TEMP_BASE = 183;
+        private int P2_ELECTP_TEMP_BASE = 183;
+        private int N2_ELECTP_TEMP_BASE = 183;
+
+        private int P1_CYG_TEMP_BASE = 220;
+        private int N1_CYG_TEMP_BASE = 220;
+        private int P2_CYG_TEMP_BASE = 220;
+        private int N2_CYG_TEMP_BASE = 220;
+
+        public void TemperatureInit()
+        {
+            trackBar8.Value = P1_ELECTP_TEMP_BASE;
+            //
+            trackBar7.Value = N1_ELECTP_TEMP_BASE;
+            //
+            trackBar5.Value = P2_ELECTP_TEMP_BASE;
+            //
+            trackBar6.Value = N2_ELECTP_TEMP_BASE;
+
+            trackBar12.Value = P1_CYG_TEMP_BASE;
+            //
+            trackBar11.Value = N1_CYG_TEMP_BASE;
+            //
+            trackBar10.Value = P2_CYG_TEMP_BASE;
+            //
+            trackBar9.Value = N2_CYG_TEMP_BASE;
+
+            textBox38.Text = (trackBar8.Value / 10.0).ToString("F1");
+            textBox39.Text = (trackBar7.Value / 10.0).ToString("F1");
+            textBox41.Text = (trackBar12.Value / 10.0).ToString("F1");
+            textBox42.Text = (trackBar11.Value / 10.0).ToString("F1");
+
+            textBox36.Text = (trackBar5.Value / 10.0).ToString("F1");
+            textBox22.Text = (trackBar10.Value / 10.0).ToString("F1");
+            textBox37.Text = (trackBar6.Value / 10.0).ToString("F1");
+            textBox40.Text = (trackBar9.Value / 10.0).ToString("F1");
+        }
+
+
+        public void TemperatureUpdateShow()
+        {
+            trackBar8.Value = P1_ELECTP_TEMP_BASE + (int)((GenerateRandomNumber() * 0.256));
+            //
+            trackBar7.Value = N1_ELECTP_TEMP_BASE + (int)((GenerateRandomNumber() * 0.526));
+            //
+            trackBar5.Value = P2_ELECTP_TEMP_BASE + (int)((GenerateRandomNumber() * 0.256));
+            //
+            trackBar6.Value = N2_ELECTP_TEMP_BASE + (int)((GenerateRandomNumber() * 0.526));
+
+            trackBar12.Value = P1_CYG_TEMP_BASE + (int)((GenerateRandomNumber() * 0.556));
+            //
+            trackBar11.Value = N1_CYG_TEMP_BASE + (int)((GenerateRandomNumber() * 0.556));
+
+            trackBar10.Value = P2_CYG_TEMP_BASE + (int)((GenerateRandomNumber() * 0.556));
+            //
+            trackBar9.Value = N2_CYG_TEMP_BASE + (int)((GenerateRandomNumber() * 0.556));
+
+            textBox38.Text = (trackBar8.Value / 10.0).ToString("F1");
+            textBox39.Text = (trackBar7.Value / 10.0).ToString("F1");
+            textBox41.Text = (trackBar12.Value / 10.0).ToString("F1");
+            textBox42.Text = (trackBar11.Value / 10.0).ToString("F1");
+
+            textBox36.Text = (trackBar5.Value / 10.0).ToString("F1");
+            textBox22.Text = (trackBar10.Value / 10.0).ToString("F1");
+            textBox37.Text = (trackBar6.Value / 10.0).ToString("F1");
+            textBox40.Text = (trackBar9.Value / 10.0).ToString("F1");
+        }
 
         private static Random random = new Random();  // 随机数生成器
         public double CalculateCurrent(double frequency)
@@ -75,9 +360,44 @@ namespace VirtualDriverApp
             return Math.Round(current, 1);
         }
 
+        string VFD_COM_PORT = string.Empty;
+        string VBT_COM_PORT = string.Empty;
+
+        static double CalculateSocValue(double ocv)
+        {
+            Console.WriteLine("OCV Voltage Input: " + ocv + " V");
+
+            double soc;
+
+            if (ocv <= 1.25)
+            {
+                soc = 0.0;
+            }
+            else if (ocv < 1.48)
+            {
+                double f_ocv = ocv;
+                soc = -63021.58807 * Math.Pow(f_ocv, 5)
+                    + 418096.88999 * Math.Pow(f_ocv, 4)
+                    - 1113069.82600 * Math.Pow(f_ocv, 3)
+                    + 1487920.93576 * Math.Pow(f_ocv, 2)
+                    - 999276.10223 * f_ocv
+                    + 269765.43313;
+
+                soc = soc / 10.0; // 原本是 0~1000 的整数，这里换算为百分比
+            }
+            else
+            {
+                soc = 100.0;
+            }
+
+            return soc;
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             this.FormBorderStyle = FormBorderStyle.None;
+
+            LogHelper.Logger.Info("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppConfig.json");
             AppConfig config = ConfigLoader.LoadConfig(configPath);
@@ -85,31 +405,36 @@ namespace VirtualDriverApp
             Console.WriteLine($"串口1: {config.VFBDevice.PortName}");
             Console.WriteLine($"AI模块2地址: {config.AIModule2.IPAddress}");
 
+            VFD_COM_PORT = config.VFBDevice.PortName;
+            VBT_COM_PORT = config.VoltDevice.PortName;
+
+            LogHelper.Logger.Info("变频器通讯端口:" + VFD_COM_PORT + " 电压板通讯端口:" + VBT_COM_PORT);
+
+            //AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
+            //AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
+
+            timer2.Enabled = true;
             timer3.Start();
-
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-            LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            //Console.WriteLine("CP")
 
             PN1_PRESS_DIFF = 0.0;
             PN2_PRESS_DIFF = 0.0;
             PN1_FLOW_DIFF = 0.0;
             PN2_FLOW_DIFF = 0.0;
-
             textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
             textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
-
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
             textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
+            EstackAndOcvVoltInit();
+            Branch_Cur_Init();
+            TemperatureInit();
 
             // 为每个从站设置保持寄存器的初始值
             slave1.SetHoldingRegister(0, 0);  // 设置从站11的寄存器0初始值
             slave2.SetHoldingRegister(0, 0);  // 设置从站22的寄存器0初始值
             slave3.SetHoldingRegister(0, 0);  // 设置从站33的寄存器0初始值
             slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
-
         }
 
         private int slave1_last_randomv = 0;
@@ -278,12 +603,6 @@ namespace VirtualDriverApp
             double flow_max = 60.0; double flow_min = 0.0;
             double press_max = 0.28; double press_min = 0.0;
 
-            // 设置从站地址、寄存器地址和要写入的值
-            //string portName = "COM16";  // 根据实际情况修改串口号
-            string portName = "COM1";
-            byte slaveAddress = 1;  // 从站地址
-            ushort registerAddress = 10;  // 寄存器地址
-
             double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
             double N1_PV_Show = ((N1_Cur / 15.0) * (press_max)) + PN1_PRESS_DIFF;
             double P2_PV_Show = ((P2_Cur / 15.0) * (press_max));
@@ -294,36 +613,28 @@ namespace VirtualDriverApp
             double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
             double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max)) + PN2_FLOW_DIFF;
 
-
-
-
-            //textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
-            //textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
-
-            //textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
-            //textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
-
             textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
             textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
 
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
+            //LogHelper.Logger.Info("---------------------------------------------");
+            //LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
 
-            textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-            textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
 
-            LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
+            //textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+            //textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
 
-            textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
-            textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+            //LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
 
-            LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+            //textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
+            //textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
 
-            textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-            textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+            //LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
 
-            LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
-            LogHelper.Logger.Info("---------------------------------------------");
+            //textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+            //textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+
+            //LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
+            //LogHelper.Logger.Info("---------------------------------------------");
 
             double flow_sensor_max = 70.0;
             double press_sensor_max = 0.34;
@@ -338,18 +649,60 @@ namespace VirtualDriverApp
             ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
             ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
 
+            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Info("P1压力给定(mA):" + P1_PV_SET + " N1压力给定(mA):" + N1_PV_SET);
+            LogHelper.Logger.Info("P2压力给定(mA):" + P2_PV_SET + " N2压力给定(mA):" + N2_PV_SET);
+            LogHelper.Logger.Info("---------------------------------------------");
+
+            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Info("P1流量给定(mA):" + P1_FV_SET + " N1流量给定(mA):" + N1_FV_SET);
+            LogHelper.Logger.Info("P2流量给定(mA):" + P2_FV_SET + " N2流量给定(mA):" + N2_FV_SET);
+            LogHelper.Logger.Info("---------------------------------------------");
+
+            double temp_sensor_range = 120.0;
+            double temp_sensor_min = -20.0;
+            //
+            ushort P1_DJY_TEMP = (ushort)(((trackBar8.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N1_DJY_TEMP = (ushort)(((trackBar7.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort P2_DJY_TEMP = (ushort)(((trackBar5.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N2_DJY_TEMP = (ushort)(((trackBar6.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Info("P1电解液温度(mA):" + P1_DJY_TEMP + " N1电解液温度(mA):" + N1_DJY_TEMP);
+            LogHelper.Logger.Info("P2电解液温度(mA):" + P2_DJY_TEMP + " N2电解液温度(mA):" + N2_DJY_TEMP);
+            LogHelper.Logger.Info("---------------------------------------------");
+
+            //
+            ushort P1_CHG_TEMP = (ushort)(((trackBar12.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N1_CYG_TEMP = (ushort)(((trackBar11.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort P2_CYG_TEMP = (ushort)(((trackBar10.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N2_CYG_TEMP = (ushort)(((trackBar9.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+
+            ushort P1_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
+            ushort P2_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
+            ushort POWER_BOX_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
+
             // 发送 Modbus 请求到一个新线程
-            await Task.Run(() =>
-            {
-                SendModbusRequest(portName, 10, P1_PV_SET);
-                SendModbusRequest(portName, 11, N1_PV_SET);
-                SendModbusRequest(portName, 14, P2_PV_SET);
-                SendModbusRequest(portName, 15, N2_PV_SET);
-                SendModbusRequest(portName, 12, P1_FV_SET);
-                SendModbusRequest(portName, 13, N1_FV_SET);
-                SendModbusRequest(portName, 16, P2_FV_SET);
-                SendModbusRequest(portName, 17, N2_FV_SET);
-            });
+            //await Task.Run(() =>
+            //{
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 10, P1_PV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 11, N1_PV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 12, P1_FV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 13, N1_FV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 14, P1_DJY_TEMP);
+            //    //AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 15, N1_PV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 16, N1_DJY_TEMP);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 17, P1_H2_SET);
+
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 18, P2_H2_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 19, N2_DJY_TEMP);
+            //    //AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 20, P2_FV_SET);
+            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 21, P2_DJY_TEMP);
+
+            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 10, N2_FV_SET);
+            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 11, P2_FV_SET);
+            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 12, N2_PV_SET);
+            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 13, P2_PV_SET);
+            //});
         }
 
         // 封装发送 Modbus 请求的代码
@@ -493,12 +846,35 @@ namespace VirtualDriverApp
 
         private void hslButton1_Click(object sender, EventArgs e)
         {
+            PCS_DIRECT = 1;
+            Branch_Cur1 = (float)372.7;
+            Branch_Cur2 = (float)376.5;
             hslButton1.OriginalColor = Color.Lime;
+            hslButton2.OriginalColor = Color.DimGray;
+            hslButton3.OriginalColor = Color.DimGray;
         }
 
         private void timer3_Tick(object sender, EventArgs e)
         {
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            EstackAndOcvVoltUpdateShow();
+            Branch_Cur_UpdateShow();
+            TemperatureUpdateShow();
+            Update_RTU_Regs();
+
+            Total_Power = (float)((Total_Volt) * (Branch_Cur1 + Branch_Cur2) / 1000.0);
+
+            uiDigitalLabel1.Value = Total_Power;
+
+            double A_SOC = CalculateSocValue(A_OCV);
+            double B_SOC = CalculateSocValue(B_OCV);
+
+            hslProgressColorful1.Value = (int)(A_SOC * 100);
+            hslProgressColorful2.Value = (int)(B_SOC * 100);
+
+            Console.WriteLine("---------------->" + A_SOC);
+            Console.WriteLine("---------------->" + B_SOC);
         }
 
         private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
@@ -533,16 +909,23 @@ namespace VirtualDriverApp
 
         private void hslButton8_Click(object sender, EventArgs e)
         {
-            string selectedPort = "COM1";
+            //string selectedPort = "COM3";
             // 设置串口配置
-            ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
+            ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
             Thread.Sleep(200);
             // 启动共享的 Modbus 线程
             ModbusRtuSlave.Start();
 
+            //string VBTPort = "COM5";
+            // 设置串口配置
+            ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
+            Thread.Sleep(100);
+            // 启动共享的 Modbus 线程
+            ModbusRtuSlaveVBT.Start();
+
+            Thread.Sleep(300);
             timer1.Enabled = true;
-            Thread.Sleep(250);
-            //timer2.Enabled = true;
+            timer2.Enabled = true;
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -572,6 +955,108 @@ namespace VirtualDriverApp
             public NetworkDeviceConfig AIModule2 { get; set; }
             public NetworkDeviceConfig DIModule { get; set; }
             public NetworkDeviceConfig DOModule { get; set; }
+        }
+
+        private void groupBox9_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void hslButton2_Click(object sender, EventArgs e)
+        {
+            PCS_DIRECT = 2;
+            Branch_Cur1 = -(float)388.7;
+            Branch_Cur2 = -(float)386.5;
+            hslButton1.OriginalColor = Color.DimGray;
+            hslButton2.OriginalColor = Color.Lime;
+            hslButton3.OriginalColor = Color.DimGray;
+        }
+
+        private void hslButton3_Click(object sender, EventArgs e)
+        {
+            PCS_DIRECT = 0;
+            Branch_Cur1 = (float)2.7;
+            Branch_Cur2 = (float)2.5;
+            hslButton1.OriginalColor = Color.DimGray;
+            hslButton2.OriginalColor = Color.DimGray;
+            hslButton3.OriginalColor = Color.Lime;
+        }
+
+        private void trackBar8_Scroll(object sender, EventArgs e)
+        {
+            P1_ELECTP_TEMP_BASE = trackBar8.Value;
+            textBox38.Text = (P1_ELECTP_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar7_Scroll(object sender, EventArgs e)
+        {
+            N1_ELECTP_TEMP_BASE = trackBar7.Value;
+            textBox39.Text = (N1_ELECTP_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar12_Scroll(object sender, EventArgs e)
+        {
+            P1_CYG_TEMP_BASE = trackBar12.Value;
+            textBox41.Text = (P1_CYG_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar11_Scroll(object sender, EventArgs e)
+        {
+            N1_CYG_TEMP_BASE = trackBar11.Value;
+            textBox42.Text = (N1_CYG_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar5_Scroll(object sender, EventArgs e)
+        {
+            P2_ELECTP_TEMP_BASE = trackBar5.Value;
+            textBox36.Text = (P2_ELECTP_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar10_Scroll(object sender, EventArgs e)
+        {
+            P2_CYG_TEMP_BASE = trackBar10.Value;
+            textBox22.Text = (P2_CYG_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar6_Scroll(object sender, EventArgs e)
+        {
+            N2_ELECTP_TEMP_BASE = trackBar6.Value;
+            textBox37.Text = (N2_ELECTP_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar9_Scroll(object sender, EventArgs e)
+        {
+            N2_CYG_TEMP_BASE = trackBar9.Value;
+            textBox40.Text = (N2_CYG_TEMP_BASE / 10.0).ToString("F1");
+        }
+
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+            PN1_PRESS_DIFF = trackBar1.Value / 1000.0;
+            textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
+        }
+
+        private void trackBar2_Scroll(object sender, EventArgs e)
+        {
+            PN1_FLOW_DIFF = trackBar2.Value / 1000.0;
+            textBox12.Text = PN1_FLOW_DIFF.ToString("F3");
+        }
+
+        private void trackBar3_Scroll(object sender, EventArgs e)
+        {
+            PN2_PRESS_DIFF = trackBar3.Value / 1000.0;
+            textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
+        }
+
+        private void trackBar4_Scroll(object sender, EventArgs e)
+        {
+            PN2_FLOW_DIFF = trackBar4.Value / 1000.0;
+            textBox20.Text = PN2_FLOW_DIFF.ToString("F3");
+        }
+
+        private void panel6_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }
@@ -640,7 +1125,7 @@ public class ModbusRtuSlave
     // 设置保持寄存器值（包括频率的目标值）
     public void SetHoldingRegister(ushort address, ushort value)
     {
-        Console.WriteLine("Setting Addr:" + address.ToString());
+        //Console.WriteLine("Setting Addr:" + address.ToString());
         if (address == 0x2001)  // 设置频率值
         {
             Console.WriteLine("Setting Target Frequency:" + value.ToString());
@@ -669,28 +1154,6 @@ public class ModbusRtuSlave
     {
         float startFrequency = currentFrequency;
         float changeDuration = 1.0f;
-
-        //if (Math.Abs(targetFrequency - startFrequency) > 20 * 100)
-        //{
-        //    changeDuration = 3.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 10 * 100 && Math.Abs(targetFrequency - startFrequency) < 20 * 100)
-        //{
-        //    changeDuration = 2.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 5 * 100 && Math.Abs(targetFrequency - startFrequency) < 10 * 100)
-        //{
-        //    changeDuration = 1.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 250 && Math.Abs(targetFrequency - startFrequency) < 500)
-        //{
-        //    changeDuration = 1.2f;
-        //}
-        //else
-        //{
-        //    changeDuration = 1.0f;
-        //}
-
         float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
 
         // 逐步变化频率
@@ -1050,10 +1513,364 @@ namespace Modbus
         }
     }
 }
+//public static class LogHelper
+//{
+//    // 创建全局静态的 Logger 实例
+//    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+//    public static Logger Logger => logger;
+//}
+
 public static class LogHelper
 {
-    // 创建全局静态的 Logger 实例
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+    private static Logger _logger;
+    public static Logger Logger
+    {
+        get
+        {
+            if (_logger == null)
+            {
+                _logger = LogManager.GetCurrentClassLogger();
+            }
+            return _logger;
+        }
+    }
+}
 
-    public static Logger Logger => logger;
+
+
+public class ModbusRtuSlaveVBT
+{
+    private static bool isPortOpen = false;  // 是否已打开串口
+    private static SerialPort serialPort;    // 串口实例
+    private static Dictionary<byte, ModbusRtuSlaveVBT> slaveInstances = new Dictionary<byte, ModbusRtuSlaveVBT>();  // 存储所有从站实例
+
+    private byte slaveAddress;
+    private ushort[] holdingRegisters;
+
+    private float currentFrequency = 0;  // 当前频率，单位Hz
+    private const float maxFrequency = 6000.0f;  // 最大频率，单位Hz
+    private const float maxCurrent = 1500.0f;  // 最大电流，单位A
+    private float targetFrequency = 0;  // 目标频率，单位Hz
+
+    private ushort final_current = 0;
+
+    private string response_log = "";
+
+    private bool comm_state = false;
+
+    // 静态构造函数，初始化串口
+    static ModbusRtuSlaveVBT()
+    {
+        // 串口未打开时初始化
+        serialPort = new SerialPort();
+        serialPort.DataReceived += SerialPort_DataReceived; // 注册 DataReceived 事件
+    }
+
+    // 设置串口参数的接口，外部调用此方法设置串口
+    public static void SetSerialPortSettings(string portName = "COM3", int baudRate = 9600, Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One)
+    {
+        if (!isPortOpen)
+        {
+            serialPort.PortName = portName;
+            serialPort.BaudRate = baudRate;
+            serialPort.Parity = parity;
+            serialPort.DataBits = dataBits;
+            serialPort.StopBits = stopBits;
+            serialPort.Open();
+            isPortOpen = true;  // 标记串口已打开
+        }
+        else
+        {
+            Console.WriteLine("串口已经打开，无法更改设置。");
+        }
+    }
+
+    // 构造函数，初始化每个从站
+    public ModbusRtuSlaveVBT(byte slaveAddress)
+    {
+        this.slaveAddress = slaveAddress;
+        this.holdingRegisters = new ushort[0x3010];  // 默认有 100 个寄存器
+        this.currentFrequency = 0;  // 初始化频率为 0Hz
+        slaveInstances[slaveAddress] = this;
+    }
+
+    // 启动 Modbus RTU 从站（只启动一个串口线程）
+    public static void Start()
+    {
+        // 启动 Modbus 处理线程（注意，这里没有使用 Thread.Sleep）
+        Console.WriteLine("Modbus RTU Slave started...");
+    }
+
+    // 设置保持寄存器值（包括频率的目标值）
+    public void SetHoldingRegister(ushort address, ushort value)
+    {
+        //Console.WriteLine("Setting Addr:" + address.ToString() + " VALUE:" + value.ToString());
+        if (address == 0x2001)  // 设置频率值
+        {
+            Console.WriteLine("Setting Target Frequency:" + value.ToString());
+            this.targetFrequency = value;  // 设置目标频率
+            Task.Run(() => GradualFrequencyChange());  // 启动频率逐步变化的任务
+        }
+        else
+        {
+            // 设置其他寄存器值的逻辑
+            holdingRegisters[address] = value;
+        }
+    }
+
+    public ushort GetHoldingRegister(ushort address)
+    {
+        return holdingRegisters[address];
+    }
+
+    public string GetCurentLogString()
+    {
+        return response_log;
+    }
+
+    public bool GetCommState()
+    {
+        return comm_state;
+    }
+
+    // 逐步变化频率（模拟真实场景）
+    private void GradualFrequencyChange()
+    {
+        float startFrequency = currentFrequency;
+        float changeDuration = 1.2f;
+
+        if (Math.Abs(targetFrequency - startFrequency) > 20 * 100)
+        {
+            changeDuration = 6.5f;
+        }
+        else if (Math.Abs(targetFrequency - startFrequency) > 10 * 100 && Math.Abs(targetFrequency - startFrequency) < 20 * 100)
+        {
+            changeDuration = 4.5f;
+        }
+        else if (Math.Abs(targetFrequency - startFrequency) > 5 * 100 && Math.Abs(targetFrequency - startFrequency) < 10 * 100)
+        {
+            changeDuration = 3.3f;
+        }
+        else if (Math.Abs(targetFrequency - startFrequency) > 250 && Math.Abs(targetFrequency - startFrequency) < 500)
+        {
+            changeDuration = 2.5f;
+        }
+        else
+        {
+            changeDuration = 1.3f;
+        }
+
+        float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
+
+        // 逐步变化频率
+        for (float t = 0; t < changeDuration; t += 0.1f) // 每 0.1 秒变化一次
+        {
+            currentFrequency = startFrequency + frequencyChangeRate * t;
+            Console.WriteLine($"Current Frequency: {currentFrequency:F2} Hz");
+
+            // 在 Modbus 保持寄存器地址 0x3000 返回频率值（模拟返回）
+            holdingRegisters[0x3000] = (ushort)currentFrequency;
+            holdingRegisters[0x3004] = (ushort)this.GetCurrent();
+
+            // 模拟每 0.1 秒的时间间隔
+            Task.Delay(88).Wait();
+        }
+
+        // 确保最终频率与目标频率一致
+        currentFrequency = targetFrequency;
+
+        holdingRegisters[0x3000] = (ushort)currentFrequency;
+        holdingRegisters[0x3004] = (ushort)this.GetCurrent();
+
+        final_current = (ushort)this.GetCurrent();
+
+        Console.WriteLine($"Final Frequency: {currentFrequency:F2} Hz");
+        Console.WriteLine($"Final Current: {currentFrequency:F2} A");
+    }
+
+    // 获取当前频率
+    public float GetFrequency()
+    {
+        return currentFrequency;
+    }
+
+    // 获取当前电流
+    public float GetCurrent()
+    {
+        Random random = new Random();
+        // 生成一个在 -50 到 50 之间的随机数
+        int randomNumber = random.Next(-3, 4);
+        // 计算电流，最大频率 60Hz 对应最大电流 15A
+        return (currentFrequency / maxFrequency) * maxCurrent + (float)(randomNumber);
+    }
+
+    public ushort GetFinalCurrent()
+    {
+        return final_current;
+    }
+
+    // DataReceived 事件处理方法
+    private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    {
+        // 每次有数据到达时触发
+        int bytesToRead = serialPort.BytesToRead;
+        byte[] request = new byte[bytesToRead];
+        serialPort.Read(request, 0, bytesToRead);
+
+        byte slaveAddress = request[0];  // 获取请求中的从站地址
+
+        if (slaveInstances.ContainsKey(slaveAddress))  // 如果字典中有该从站实例
+        {
+            var slave = slaveInstances[slaveAddress];  // 获取对应的从站实例
+            byte functionCode = request[1];  // 功能码
+            byte[] response = null;
+
+            // 处理 Modbus 读保持寄存器请求（功能码 0x03）
+            if (functionCode == 0x03)
+            {
+                ushort startingAddress = (ushort)((request[2] << 8) + request[3]);
+                ushort quantity = (ushort)((request[4] << 8) + request[5]);
+
+                // 处理该从站的保持寄存器读取请求
+                response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
+            }
+            // 处理 Modbus 写单个寄存器请求（功能码 0x06）
+            else if (functionCode == 0x06)
+            {
+                ushort registerAddress = (ushort)((request[2] << 8) + request[3]);
+                ushort registerValue = (ushort)((request[4] << 8) + request[5]);
+
+                // 处理写单个寄存器
+                response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
+            }
+
+            if (response != null)
+            {
+                slave.comm_state = !slave.comm_state;
+
+                serialPort.Write(response, 0, response.Length);
+                Console.WriteLine("Sent response: " + BitConverter.ToString(response));
+                slave.response_log = "Sent response: " + BitConverter.ToString(response);
+            }
+        }
+    }
+
+    // 处理读保持寄存器（功能码 0x03）
+    private byte[] HandleReadHoldingRegisters(ushort startingAddress, ushort quantity)
+    {
+        if (startingAddress >= holdingRegisters.Length || startingAddress + quantity > holdingRegisters.Length)
+        {
+            Console.WriteLine("Invalid register range.");
+            return null;  // 无效的寄存器地址范围
+        }
+
+        byte[] response = new byte[5 + 2 * quantity]; // 响应长度：功能码 + 字节数 + 寄存器数据
+
+        response[0] = slaveAddress;  // 从站地址
+        response[1] = 0x03;  // 功能码（0x03：读取保持寄存器）  
+        response[2] = (byte)(2 * quantity); // 数据字节数（每个寄存器 2 字节）
+
+        // 写入寄存器值
+        for (int i = 0; i < quantity; i++)
+        {
+            ushort registerValue = holdingRegisters[startingAddress + (ushort)i];
+            response[3 + 2 * i] = (byte)(registerValue >> 8);  // 高字节
+            response[4 + 2 * i] = (byte)(registerValue & 0xFF);  // 低字节
+        }
+
+        // 校验（CRC 检查）
+        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
+        response[response.Length - 2] = crc[0];
+        response[response.Length - 1] = crc[1];
+
+        // 比较计算出的 CRC 和接收到的 CRC 是否一致
+        if (!ValidateCRC(response))
+        {
+            Console.WriteLine("CRC mismatch!");
+            this.response_log = "Read Holding Registers CRC mismatch!";
+            return null;  // CRC 不匹配时返回 null
+        }
+
+        return response;
+    }
+
+    // 处理写单个保持寄存器（功能码 0x06）
+    private byte[] HandleWriteSingleRegister(ushort registerAddress, ushort registerValue)
+    {
+        if (registerAddress >= holdingRegisters.Length)
+        {
+            Console.WriteLine("Invalid register address.");
+            return null;  // 无效的寄存器地址
+        }
+
+        // 更新寄存器值
+        holdingRegisters[registerAddress] = registerValue;
+
+        byte[] response = new byte[6]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
+
+        response[0] = slaveAddress;  // 从站地址
+        response[1] = 0x06;  // 功能码（0x06：写单个寄存器）
+        response[2] = (byte)(registerAddress >> 8);  // 寄存器地址高字节
+        response[3] = (byte)(registerAddress & 0xFF);  // 寄存器地址低字节
+        response[4] = (byte)(registerValue >> 8);  // 寄存器值高字节
+        response[5] = (byte)(registerValue & 0xFF);  // 寄存器值低字节
+
+        // 校验（CRC 检查）
+        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
+        response[response.Length - 2] = crc[0];
+        response[response.Length - 1] = crc[1];
+
+
+        // 比较计算出的 CRC 和接收到的 CRC 是否一致
+        if (!ValidateCRC(response))
+        {
+            Console.WriteLine("CRC mismatch!");
+            this.response_log = "Write Single Register CRC mismatch!";
+            return null;  // CRC 不匹配时返回 null
+        }
+
+        SetHoldingRegister(registerAddress, registerValue);
+
+        return response;
+    }
+
+    // CRC 校验方法（假设使用的是 Modbus CRC16）
+    private byte[] CalculateCRC(byte[] data)
+    {
+        ushort crc = 0xFFFF;
+
+        foreach (byte byteData in data)
+        {
+            crc ^= byteData;
+
+            for (int i = 0; i < 8; i++)
+            {
+                if ((crc & 0x0001) != 0)
+                {
+                    crc >>= 1;
+                    crc ^= 0xA001;
+                }
+                else
+                {
+                    crc >>= 1;
+                }
+            }
+        }
+
+        return new byte[] { (byte)(crc & 0xFF), (byte)((crc >> 8) & 0xFF) };
+    }
+
+    // 校验计算出来的 CRC 是否和响应中的 CRC 一致
+    private bool ValidateCRC(byte[] response)
+    {
+        // 提取响应中存储的 CRC 值
+        byte[] receivedCRC = new byte[] { response[response.Length - 2], response[response.Length - 1] };
+
+        // 计算实际的 CRC 值
+        byte[] calculatedCRC = CalculateCRC(response.Take(response.Length - 2).ToArray());
+
+        // 比较计算出的 CRC 和响应中的 CRC
+        return receivedCRC.SequenceEqual(calculatedCRC);
+    }
 }

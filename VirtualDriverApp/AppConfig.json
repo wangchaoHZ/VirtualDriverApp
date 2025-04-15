@@ -7,7 +7,7 @@
     "Parity": "None"
   },
   "VoltDevice": {
-    "PortName": "COM3",
+    "PortName": "COM5",
     "BaudRate": 9600,
     "DataBits": 8,
     "StopBits": 1,
