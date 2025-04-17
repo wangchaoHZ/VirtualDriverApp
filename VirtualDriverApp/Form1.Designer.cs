@@ -118,6 +118,7 @@
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.checkBox9 = new System.Windows.Forms.CheckBox();
+            this.hslProgressColorful1 = new HslControls.HslProgressColorful();
             this.checkBox10 = new System.Windows.Forms.CheckBox();
             this.label28 = new System.Windows.Forms.Label();
             this.label27 = new System.Windows.Forms.Label();
@@ -126,6 +127,8 @@
             this.label26 = new System.Windows.Forms.Label();
             this.label25 = new System.Windows.Forms.Label();
             this.textBox34 = new System.Windows.Forms.TextBox();
+            this.progressBar3 = new System.Windows.Forms.ProgressBar();
+            this.progressBar2 = new System.Windows.Forms.ProgressBar();
             this.textBox26 = new System.Windows.Forms.TextBox();
             this.textBox23 = new System.Windows.Forms.TextBox();
             this.textBox27 = new System.Windows.Forms.TextBox();
@@ -166,6 +169,7 @@
             this.checkBox12 = new System.Windows.Forms.CheckBox();
             this.checkBox11 = new System.Windows.Forms.CheckBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
+            this.hslProgressColorful2 = new HslControls.HslProgressColorful();
             this.groupBox10 = new System.Windows.Forms.GroupBox();
             this.hslButton6 = new HslControls.HslButton();
             this.hslButton5 = new HslControls.HslButton();
@@ -186,10 +190,7 @@
             this.label42 = new System.Windows.Forms.Label();
             this.label46 = new System.Windows.Forms.Label();
             this.groupBox8 = new System.Windows.Forms.GroupBox();
-            this.progressBar3 = new System.Windows.Forms.ProgressBar();
-            this.progressBar2 = new System.Windows.Forms.ProgressBar();
-            this.hslProgressColorful2 = new HslControls.HslProgressColorful();
-            this.hslProgressColorful1 = new HslControls.HslProgressColorful();
+            this.timer4 = new System.Windows.Forms.Timer(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -1398,6 +1399,20 @@
             this.checkBox9.UseVisualStyleBackColor = true;
             this.checkBox9.CheckedChanged += new System.EventHandler(this.checkBox9_CheckedChanged_1);
             // 
+            // hslProgressColorful1
+            // 
+            this.hslProgressColorful1.BackColor = System.Drawing.Color.Transparent;
+            this.hslProgressColorful1.ForeColor = System.Drawing.Color.Black;
+            this.hslProgressColorful1.Location = new System.Drawing.Point(724, 44);
+            this.hslProgressColorful1.Margin = new System.Windows.Forms.Padding(4);
+            this.hslProgressColorful1.Max = 1000;
+            this.hslProgressColorful1.Name = "hslProgressColorful1";
+            this.hslProgressColorful1.ProgressColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.hslProgressColorful1.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
+            this.hslProgressColorful1.Size = new System.Drawing.Size(191, 45);
+            this.hslProgressColorful1.TabIndex = 55;
+            this.hslProgressColorful1.Load += new System.EventHandler(this.hslProgressColorful1_Load);
+            // 
             // checkBox10
             // 
             this.checkBox10.AutoSize = true;
@@ -1487,6 +1502,22 @@
             this.textBox34.Text = "1.2345V";
             this.textBox34.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.textBox34.UseWaitCursor = true;
+            // 
+            // progressBar3
+            // 
+            this.progressBar3.Location = new System.Drawing.Point(799, 75);
+            this.progressBar3.Margin = new System.Windows.Forms.Padding(4);
+            this.progressBar3.Name = "progressBar3";
+            this.progressBar3.Size = new System.Drawing.Size(11, 10);
+            this.progressBar3.TabIndex = 55;
+            // 
+            // progressBar2
+            // 
+            this.progressBar2.Location = new System.Drawing.Point(808, 64);
+            this.progressBar2.Margin = new System.Windows.Forms.Padding(4);
+            this.progressBar2.Name = "progressBar2";
+            this.progressBar2.Size = new System.Drawing.Size(11, 10);
+            this.progressBar2.TabIndex = 54;
             // 
             // textBox26
             // 
@@ -1688,6 +1719,7 @@
             this.checkBox15.TabIndex = 68;
             this.checkBox15.Text = "支路2故障";
             this.checkBox15.UseVisualStyleBackColor = true;
+            this.checkBox15.CheckedChanged += new System.EventHandler(this.checkBox15_CheckedChanged);
             // 
             // hslLabel2
             // 
@@ -2021,6 +2053,7 @@
             this.checkBox12.TabIndex = 64;
             this.checkBox12.Text = "max";
             this.checkBox12.UseVisualStyleBackColor = true;
+            this.checkBox12.CheckedChanged += new System.EventHandler(this.checkBox12_CheckedChanged_1);
             // 
             // checkBox11
             // 
@@ -2033,6 +2066,7 @@
             this.checkBox11.TabIndex = 65;
             this.checkBox11.Text = "min";
             this.checkBox11.UseVisualStyleBackColor = true;
+            this.checkBox11.CheckedChanged += new System.EventHandler(this.checkBox11_CheckedChanged);
             // 
             // groupBox7
             // 
@@ -2062,6 +2096,19 @@
             this.groupBox7.TabIndex = 51;
             this.groupBox7.TabStop = false;
             this.groupBox7.Text = "液流2电堆";
+            // 
+            // hslProgressColorful2
+            // 
+            this.hslProgressColorful2.BackColor = System.Drawing.Color.Transparent;
+            this.hslProgressColorful2.ForeColor = System.Drawing.Color.Black;
+            this.hslProgressColorful2.Location = new System.Drawing.Point(724, 40);
+            this.hslProgressColorful2.Margin = new System.Windows.Forms.Padding(4);
+            this.hslProgressColorful2.Max = 1000;
+            this.hslProgressColorful2.Name = "hslProgressColorful2";
+            this.hslProgressColorful2.ProgressColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.hslProgressColorful2.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
+            this.hslProgressColorful2.Size = new System.Drawing.Size(191, 45);
+            this.hslProgressColorful2.TabIndex = 63;
             // 
             // groupBox10
             // 
@@ -2308,48 +2355,10 @@
             this.groupBox8.TabStop = false;
             this.groupBox8.Text = "IO设备状态";
             // 
-            // progressBar3
+            // timer4
             // 
-            this.progressBar3.Location = new System.Drawing.Point(799, 75);
-            this.progressBar3.Margin = new System.Windows.Forms.Padding(4);
-            this.progressBar3.Name = "progressBar3";
-            this.progressBar3.Size = new System.Drawing.Size(11, 10);
-            this.progressBar3.TabIndex = 55;
-            // 
-            // progressBar2
-            // 
-            this.progressBar2.Location = new System.Drawing.Point(808, 64);
-            this.progressBar2.Margin = new System.Windows.Forms.Padding(4);
-            this.progressBar2.Name = "progressBar2";
-            this.progressBar2.Size = new System.Drawing.Size(11, 10);
-            this.progressBar2.TabIndex = 54;
-            // 
-            // hslProgressColorful2
-            // 
-            this.hslProgressColorful2.BackColor = System.Drawing.Color.Transparent;
-            this.hslProgressColorful2.ForeColor = System.Drawing.Color.Black;
-            this.hslProgressColorful2.Location = new System.Drawing.Point(724, 40);
-            this.hslProgressColorful2.Margin = new System.Windows.Forms.Padding(4);
-            this.hslProgressColorful2.Max = 1000;
-            this.hslProgressColorful2.Name = "hslProgressColorful2";
-            this.hslProgressColorful2.ProgressColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.hslProgressColorful2.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
-            this.hslProgressColorful2.Size = new System.Drawing.Size(191, 45);
-            this.hslProgressColorful2.TabIndex = 63;
-            // 
-            // hslProgressColorful1
-            // 
-            this.hslProgressColorful1.BackColor = System.Drawing.Color.Transparent;
-            this.hslProgressColorful1.ForeColor = System.Drawing.Color.Black;
-            this.hslProgressColorful1.Location = new System.Drawing.Point(724, 44);
-            this.hslProgressColorful1.Margin = new System.Windows.Forms.Padding(4);
-            this.hslProgressColorful1.Max = 1000;
-            this.hslProgressColorful1.Name = "hslProgressColorful1";
-            this.hslProgressColorful1.ProgressColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.hslProgressColorful1.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
-            this.hslProgressColorful1.Size = new System.Drawing.Size(191, 45);
-            this.hslProgressColorful1.TabIndex = 55;
-            this.hslProgressColorful1.Load += new System.EventHandler(this.hslProgressColorful1_Load);
+            this.timer4.Interval = 1000;
+            this.timer4.Tick += new System.EventHandler(this.timer4_Tick);
             // 
             // Form1
             // 
@@ -2574,6 +2583,7 @@
         private System.Windows.Forms.ProgressBar progressBar3;
         private System.Windows.Forms.ProgressBar progressBar2;
         private HslControls.HslProgressColorful hslProgressColorful2;
+        private System.Windows.Forms.Timer timer4;
     }
 }
 

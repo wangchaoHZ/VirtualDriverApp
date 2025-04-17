@@ -23,13 +23,13 @@ namespace VirtualDriverApp
         private ModbusTcpClient AI02_ModbusClient;
         private byte AI02_ModbusClient_ID = 6;
 
+        private ModbusTcpClient DO_ModbusClient;
+        private byte DO_ModbusClient_ID = 2;
+
+
         public Form1()
         {
             InitializeComponent();
-
-            // 创建 ModbusTcpClient 实例
-            AI01_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
-            AI02_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
             // 设置窗体启动时自动居中
             this.StartPosition = FormStartPosition.CenterScreen;
         }
@@ -66,11 +66,11 @@ namespace VirtualDriverApp
         private double PN1_FLOW_DIFF;
         private double PN2_FLOW_DIFF;
 
-        private double A_ES_VOLT_BASE = 23.12;
-        private double B_ES_VOLT_BASE = 23.16;
+        private double A_ES_VOLT_BASE = 12.12;
+        private double B_ES_VOLT_BASE = 12.15;
 
-        private double A_OCV_VOLT_BASE = 1.3583;
-        private double B_OCV_VOLT_BASE = 1.3587;
+        private double A_OCV_VOLT_BASE = 1.2583;
+        private double B_OCV_VOLT_BASE = 1.2587;
 
         private double[] A_ES_VOLT = new double[6];
         private double A_OCV;
@@ -98,13 +98,19 @@ namespace VirtualDriverApp
         {
             ushort A_Max_Total_V = (ushort)Math.Max((A_ES_VOLT[0] + A_ES_VOLT[1] + A_ES_VOLT[2]), (A_ES_VOLT[3] + A_ES_VOLT[4] + A_ES_VOLT[5]));
 
-            Volt_A_Slave.SetHoldingRegister(36, A_Max_Total_V);//0
-            Volt_A_Slave.SetHoldingRegister(37, (ushort)((ushort)A_ES_VOLT[0] * 10));//1
-            Volt_A_Slave.SetHoldingRegister(38, (ushort)((ushort)A_ES_VOLT[1] * 10));//1
-            Volt_A_Slave.SetHoldingRegister(39, (ushort)((ushort)A_ES_VOLT[2] * 10));//1
-            Volt_A_Slave.SetHoldingRegister(40, (ushort)((ushort)A_ES_VOLT[3] * 10));//1
-            Volt_A_Slave.SetHoldingRegister(41, (ushort)((ushort)A_ES_VOLT[4] * 10));//1
-            Volt_A_Slave.SetHoldingRegister(42, (ushort)((ushort)A_ES_VOLT[5] * 10));//1
+            for (int i = 0; i < A_ES_VOLT.Length; i++)
+            {
+                //A_ES_VOLT[i] = 99.5;
+                Console.WriteLine((ushort)(A_ES_VOLT[i] * 10));
+            }
+
+            Volt_A_Slave.SetHoldingRegister(36, (ushort)(A_Max_Total_V * 10));//0
+            Volt_A_Slave.SetHoldingRegister(37, (ushort)(A_ES_VOLT[0] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(38, (ushort)(A_ES_VOLT[1] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(39, (ushort)(A_ES_VOLT[2] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(40, (ushort)(A_ES_VOLT[3] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(41, (ushort)(A_ES_VOLT[4] * 10));//1
+            Volt_A_Slave.SetHoldingRegister(42, (ushort)(A_ES_VOLT[5] * 10));//1
             Volt_A_Slave.SetHoldingRegister(43, 0);//7
             Volt_A_Slave.SetHoldingRegister(44, 0);//8
             Volt_A_Slave.SetHoldingRegister(45, A_CURRENT_VOLT);//9电流通道
@@ -113,13 +119,13 @@ namespace VirtualDriverApp
 
             ushort B_Max_Total_V = (ushort)Math.Max((B_ES_VOLT[0] + B_ES_VOLT[1] + B_ES_VOLT[2]), (B_ES_VOLT[3] + B_ES_VOLT[4] + B_ES_VOLT[5]));
 
-            Volt_B_Slave.SetHoldingRegister(36, B_Max_Total_V);
-            Volt_B_Slave.SetHoldingRegister(37, (ushort)((ushort)B_ES_VOLT[0] * 10));//1
-            Volt_B_Slave.SetHoldingRegister(38, (ushort)((ushort)B_ES_VOLT[1] * 10));//1
-            Volt_B_Slave.SetHoldingRegister(39, (ushort)((ushort)B_ES_VOLT[2] * 10));//1
-            Volt_B_Slave.SetHoldingRegister(40, (ushort)((ushort)B_ES_VOLT[3] * 10));//1
-            Volt_B_Slave.SetHoldingRegister(41, (ushort)((ushort)B_ES_VOLT[4] * 10));//1
-            Volt_B_Slave.SetHoldingRegister(42, (ushort)((ushort)B_ES_VOLT[5] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(36, (ushort)(B_Max_Total_V * 10));
+            Volt_B_Slave.SetHoldingRegister(37, (ushort)(B_ES_VOLT[0] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(38, (ushort)(B_ES_VOLT[1] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(39, (ushort)(B_ES_VOLT[2] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(40, (ushort)(B_ES_VOLT[3] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(41, (ushort)(B_ES_VOLT[4] * 10));//1
+            Volt_B_Slave.SetHoldingRegister(42, (ushort)(B_ES_VOLT[5] * 10));//1
             Volt_B_Slave.SetHoldingRegister(43, 0);
             Volt_B_Slave.SetHoldingRegister(44, 0);
             Volt_B_Slave.SetHoldingRegister(45, B_CURRENT_VOLT);
@@ -159,7 +165,7 @@ namespace VirtualDriverApp
         private float RandomFloatGenerator()
         {
             Random rand = new Random();
-            float value = (float)(rand.NextDouble() * 0.8f); // 转为 float 类型
+            float value = (float)(rand.NextDouble() * 0.345f); // 转为 float 类型
             return value;
         }
 
@@ -193,34 +199,75 @@ namespace VirtualDriverApp
 
         public void EstackAndOcvVoltUpdateShow()
         {
-            for (int i = 0; i < A_ES_VOLT.Length; i++)
+            if (checkBox10.Checked)
             {
-                A_ES_VOLT[i] = A_ES_VOLT_BASE + GenerateRandomNumber03() / 2.0 + RandomFloatGenerator();
-                B_ES_VOLT[i] = B_ES_VOLT_BASE + GenerateRandomNumber03() / 2.0 + RandomFloatGenerator();
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    A_ES_VOLT[i] = 99.5;
+                }
+            }
+            else if (checkBox9.Checked)
+            {
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    A_ES_VOLT[i] = 0.5;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    A_ES_VOLT[i] = A_ES_VOLT_BASE + +RandomFloatGenerator();
+                }
+            }
+
+            if (checkBox12.Checked)
+            {
+                for (int i = 0; i < B_ES_VOLT.Length; i++)
+                {
+                    B_ES_VOLT[i] = 99.5;
+                }
+            }
+            else if (checkBox11.Checked)
+            {
+                for (int i = 0; i < B_ES_VOLT.Length; i++)
+                {
+                    B_ES_VOLT[i] = 0.5;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    B_ES_VOLT[i] = B_ES_VOLT_BASE + +RandomFloatGenerator();
+                }
             }
 
             A_OCV = A_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
             B_OCV = B_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
 
-            textBox24.Text = A_ES_VOLT[0].ToString("F2");
-            textBox25.Text = A_ES_VOLT[1].ToString("F2");
-            textBox27.Text = A_ES_VOLT[2].ToString("F2");
-            textBox15.Text = A_ES_VOLT[3].ToString("F2");
-            textBox23.Text = A_ES_VOLT[4].ToString("F2");
-            textBox26.Text = A_ES_VOLT[5].ToString("F2");
+            textBox24.Text = A_ES_VOLT[0].ToString("F1");
+            textBox25.Text = A_ES_VOLT[1].ToString("F1");
+            textBox27.Text = A_ES_VOLT[2].ToString("F1");
+            textBox15.Text = A_ES_VOLT[3].ToString("F1");
+            textBox23.Text = A_ES_VOLT[4].ToString("F1");
+            textBox26.Text = A_ES_VOLT[5].ToString("F1");
             textBox34.Text = A_OCV.ToString("F4");
 
-            textBox35.Text = B_ES_VOLT[0].ToString("F2");
-            textBox33.Text = B_ES_VOLT[1].ToString("F2");
-            textBox31.Text = B_ES_VOLT[2].ToString("F2");
-            textBox32.Text = B_ES_VOLT[3].ToString("F2");
-            textBox30.Text = B_ES_VOLT[4].ToString("F2");
-            textBox29.Text = B_ES_VOLT[5].ToString("F2");
+            textBox35.Text = B_ES_VOLT[0].ToString("F1");
+            textBox33.Text = B_ES_VOLT[1].ToString("F1");
+            textBox31.Text = B_ES_VOLT[2].ToString("F1");
+            textBox32.Text = B_ES_VOLT[3].ToString("F1");
+            textBox30.Text = B_ES_VOLT[4].ToString("F1");
+            textBox29.Text = B_ES_VOLT[5].ToString("F1");
             textBox28.Text = B_OCV.ToString("F4");
         }
 
         private float Branch_Cur1;
         private float Branch_Cur2;
+
+        private float Branch_Cur1_BASE = 2.5F;
+        private float Branch_Cur2_BASE = 3.1F;
 
         public void Branch_Cur_Init()
         {
@@ -233,6 +280,9 @@ namespace VirtualDriverApp
 
         public void Branch_Cur_UpdateShow()
         {
+            Branch_Cur1 = (float)(Branch_Cur1_BASE + (GenerateRandomNumber() * 0.712) );
+            Branch_Cur2 = (float)(Branch_Cur2_BASE + (GenerateRandomNumber() * 0.712) );
+
             A_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur1);
             B_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur2);
 
@@ -257,11 +307,11 @@ namespace VirtualDriverApp
                 Branch_Cur2_Show = -Branch_Cur2;
             }
 
-            int branch_cur1 = (int)((float)(Branch_Cur1_Show + GenerateRandomNumber() * 0.712) * 10);
-            int branch_cur2 = (int)((float)(Branch_Cur2_Show + GenerateRandomNumber() * 0.712) * 10);
+            int branch_cur1 = (int)((float)(Branch_Cur1_Show));
+            int branch_cur2 = (int)((float)(Branch_Cur2_Show));
 
-            hslGauge1.Value = (float)(branch_cur1 / 10.0);
-            hslGauge2.Value = (float)(branch_cur2 / 10.0);
+            hslGauge1.Value = (float)(branch_cur1);
+            hslGauge2.Value = (float)(branch_cur2);
 
             uiDigitalLabel2.Value = hslGauge1.Value + hslGauge2.Value;
         }
@@ -410,11 +460,33 @@ namespace VirtualDriverApp
 
             LogHelper.Logger.Info("变频器通讯端口:" + VFD_COM_PORT + " 电压板通讯端口:" + VBT_COM_PORT);
 
-            //AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
-            //AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
 
-            timer2.Enabled = true;
+            // 创建 ModbusTcpClient 实例
+            AI01_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
+            AI02_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
+            DO_ModbusClient = new ModbusTcpClient();   // 使用无参数构造函数
+
+            AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
+            AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
+            DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);    // 端口可能会自动设置，或者你需要使用其他方式设置端口
+
+            ushort[] values_buff =
+            {
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+            };
+
+            DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
+
+            timer2.Start();
             timer3.Start();
+
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             PN1_PRESS_DIFF = 0.0;
@@ -599,7 +671,6 @@ namespace VirtualDriverApp
 
         private async void timer2_Tick(object sender, EventArgs e)
         {
-
             double flow_max = 60.0; double flow_min = 0.0;
             double press_max = 0.28; double press_min = 0.0;
 
@@ -615,26 +686,6 @@ namespace VirtualDriverApp
 
             textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
             textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
-
-            //LogHelper.Logger.Info("---------------------------------------------");
-            //LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
-
-
-            //textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-            //textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
-
-            //LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
-
-            //textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
-            //textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
-
-            //LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
-
-            //textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-            //textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
-
-            //LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
-            //LogHelper.Logger.Info("---------------------------------------------");
 
             double flow_sensor_max = 70.0;
             double press_sensor_max = 0.34;
@@ -681,28 +732,39 @@ namespace VirtualDriverApp
             ushort P2_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
             ushort POWER_BOX_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
 
-            // 发送 Modbus 请求到一个新线程
-            //await Task.Run(() =>
-            //{
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 10, P1_PV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 11, N1_PV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 12, P1_FV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 13, N1_FV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 14, P1_DJY_TEMP);
-            //    //AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 15, N1_PV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 16, N1_DJY_TEMP);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 17, P1_H2_SET);
+            //发送 Modbus 请求到一个新线程
+            await Task.Run(() =>
+            {
+                ushort startAddress = 10;
 
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 18, P2_H2_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 19, N2_DJY_TEMP);
-            //    //AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 20, P2_FV_SET);
-            //    AI01_ModbusClient.WriteSingleRegister(AI01_ModbusClient_ID, 21, P2_DJY_TEMP);
+                ushort[] values =
+                {
+                    P1_PV_SET,
+                    N1_PV_SET,
+                    P1_FV_SET,
+                    N1_FV_SET,
+                    P1_DJY_TEMP,
+                    0,
+                    N1_DJY_TEMP,
+                    P1_H2_SET,
+                    P2_H2_SET,
+                    N2_DJY_TEMP,
+                    0,
+                    P2_DJY_TEMP
+                };
 
-            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 10, N2_FV_SET);
-            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 11, P2_FV_SET);
-            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 12, N2_PV_SET);
-            //    AI02_ModbusClient.WriteSingleRegister(AI02_ModbusClient_ID, 13, P2_PV_SET);
-            //});
+                AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
+
+                ushort[] values_buff =
+                {
+                    N2_FV_SET,
+                    P2_FV_SET,
+                    N2_PV_SET,
+                    P2_PV_SET
+                };
+
+                AI02_ModbusClient.WriteMultipleRegisters(AI02_ModbusClient_ID, startAddress, values_buff);
+            });
         }
 
         // 封装发送 Modbus 请求的代码
@@ -844,24 +906,24 @@ namespace VirtualDriverApp
 
         }
 
+        //private 
+
         private void hslButton1_Click(object sender, EventArgs e)
         {
             PCS_DIRECT = 1;
-            Branch_Cur1 = (float)372.7;
-            Branch_Cur2 = (float)376.5;
+            hslTitle1.TextRight = "充电运行中";
+            hslTitle1.RightTextColor = Color.Lime;
+            Branch_Cur1_BASE = (float)372.7;
+            Branch_Cur2_BASE = (float)376.5;
             hslButton1.OriginalColor = Color.Lime;
             hslButton2.OriginalColor = Color.DimGray;
             hslButton3.OriginalColor = Color.DimGray;
+            timer4.Start();
         }
 
         private void timer3_Tick(object sender, EventArgs e)
         {
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-            EstackAndOcvVoltUpdateShow();
-            Branch_Cur_UpdateShow();
-            TemperatureUpdateShow();
-            Update_RTU_Regs();
 
             Total_Power = (float)((Total_Volt) * (Branch_Cur1 + Branch_Cur2) / 1000.0);
 
@@ -875,16 +937,37 @@ namespace VirtualDriverApp
 
             Console.WriteLine("---------------->" + A_SOC);
             Console.WriteLine("---------------->" + B_SOC);
+
+            Branch_Cur_UpdateShow();
+
+            TemperatureUpdateShow();
+
+            EstackAndOcvVoltUpdateShow();
+            Update_RTU_Regs();
         }
 
         private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
         {
-
+            if (checkBox9.Checked)
+            {
+                checkBox10.Enabled = false;
+            }
+            else
+            {
+                checkBox10.Enabled = true;
+            }
         }
 
         private void checkBox10_CheckedChanged_1(object sender, EventArgs e)
         {
-
+            if (checkBox10.Checked)
+            {
+                checkBox9.Enabled = false;
+            }
+            else
+            {
+                checkBox9.Enabled = true;
+            }
         }
 
         private void hslLabel1_Click(object sender, EventArgs e)
@@ -894,7 +977,16 @@ namespace VirtualDriverApp
 
         private void checkBox14_CheckedChanged(object sender, EventArgs e)
         {
-
+            if (checkBox14.Checked)
+            {
+                Branch_Cur1 = 1000;
+                //Branch_Cur2 = 1500;
+            }
+            else
+            {
+                Branch_Cur1 = 0;
+                //Branch_Cur2 = 0;
+            }
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -926,6 +1018,8 @@ namespace VirtualDriverApp
             Thread.Sleep(300);
             timer1.Enabled = true;
             timer2.Enabled = true;
+
+            hslButton8.OriginalColor = Color.Lime;
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -965,21 +1059,26 @@ namespace VirtualDriverApp
         private void hslButton2_Click(object sender, EventArgs e)
         {
             PCS_DIRECT = 2;
-            Branch_Cur1 = -(float)388.7;
-            Branch_Cur2 = -(float)386.5;
+            Branch_Cur1_BASE = -(float)388.7;
+            Branch_Cur2_BASE = -(float)386.5;
             hslButton1.OriginalColor = Color.DimGray;
             hslButton2.OriginalColor = Color.Lime;
             hslButton3.OriginalColor = Color.DimGray;
+
+            hslTitle1.TextRight = "放电运行中";
+            hslTitle1.RightTextColor = Color.Cyan;
+            timer4.Start();
         }
 
         private void hslButton3_Click(object sender, EventArgs e)
         {
             PCS_DIRECT = 0;
-            Branch_Cur1 = (float)2.7;
-            Branch_Cur2 = (float)2.5;
+            Branch_Cur1_BASE = (float)2.5;
+            Branch_Cur2_BASE = (float)2.5;
             hslButton1.OriginalColor = Color.DimGray;
             hslButton2.OriginalColor = Color.DimGray;
             hslButton3.OriginalColor = Color.Lime;
+            timer4.Stop();
         }
 
         private void trackBar8_Scroll(object sender, EventArgs e)
@@ -1057,6 +1156,197 @@ namespace VirtualDriverApp
         private void panel6_Paint(object sender, PaintEventArgs e)
         {
 
+        }
+
+        private void checkBox15_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox14.Checked)
+            {
+                //Branch_Cur1 = 1500;
+                Branch_Cur2 = 1000;
+            }
+            else
+            {
+                //Branch_Cur1 = 0;
+                Branch_Cur2 = 0;
+            }
+        }
+
+        private void checkBox12_CheckedChanged_1(object sender, EventArgs e)
+        {
+            if (checkBox12.Checked)
+            {
+                checkBox11.Enabled = false;
+            }
+            else
+            {
+                checkBox11.Enabled = true;
+            }
+        }
+
+        private void checkBox11_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox11.Checked)
+            {
+                checkBox12.Enabled = false;
+            }
+            else
+            {
+                checkBox12.Enabled = true;
+            }
+        }
+
+
+        double A_ES_ADJUST_STEP = 0.0;
+        double B_ES_ADJUST_STEP = 0.0;
+
+        double A_ES_MAX_VOLT = 82.5;
+        double B_ES_MAX_VOLT = 82.8;
+
+        double A_ES_MIN_VOLT = 11.6;
+        double B_ES_MIN_VOLT = 11.9;
+
+        double A_OCV_ADJUST_STEP = 0.0;
+        double B_OCV_ADJUST_STEP = 0.0;
+
+        double A_OCV_MAX_VOLT = 1.485;
+        double B_OCV_MAX_VOLT = 1.485;
+
+        double A_OCV_MIN_VOLT = 1.239;
+        double B_OCV_MIN_VOLT = 1.239;
+
+        int CHARGE_TICK_CNT = 0;
+        int DISCHARGE_TICK_CNT = 0;
+        private void timer4_Tick(object sender, EventArgs e)
+        {
+
+            float time_add_freq = 300.0F;
+
+            if (PCS_DIRECT == 1)
+            {
+
+                if (A_ES_VOLT_BASE > A_ES_MAX_VOLT)
+                {
+                    A_ES_VOLT_BASE = A_ES_MAX_VOLT;
+                }
+
+                if (B_ES_VOLT_BASE > B_ES_MAX_VOLT)
+                {
+                    B_ES_VOLT_BASE = B_ES_MAX_VOLT;
+                }
+
+                if (A_ES_VOLT_BASE == A_ES_MAX_VOLT && B_ES_VOLT_BASE == B_ES_MAX_VOLT)
+                {
+                    A_ES_ADJUST_STEP = 0.0;
+                    B_ES_ADJUST_STEP = 0.0;
+
+                    A_OCV_ADJUST_STEP = 0.0;
+                    B_OCV_ADJUST_STEP = 0.0;
+
+                    hslTitle1.TextRight = "充电完成";
+                    hslTitle1.RightTextColor = Color.Lime;
+                    CHARGE_TICK_CNT = 0;
+
+                    timer4.Stop();
+                }
+                else
+                {
+                    CHARGE_TICK_CNT++;
+
+                    LogHelper.Logger.Info("充电操作步数:" + CHARGE_TICK_CNT);
+
+                    if (A_ES_ADJUST_STEP == 0.0)
+                    {
+                        A_ES_ADJUST_STEP = (A_ES_MAX_VOLT - A_ES_VOLT_BASE) / time_add_freq;
+                    }
+
+                    if (B_ES_ADJUST_STEP == 0.0)
+                    {
+                        B_ES_ADJUST_STEP = (B_ES_MAX_VOLT - B_ES_VOLT_BASE) / time_add_freq;
+                    }
+
+                    if (A_OCV_ADJUST_STEP == 0.0)
+                    {
+                        A_OCV_ADJUST_STEP = (A_OCV_MAX_VOLT - A_OCV_VOLT_BASE) / time_add_freq;
+                    }
+
+                    if (B_OCV_ADJUST_STEP == 0.0)
+                    {
+                        B_OCV_ADJUST_STEP = (B_OCV_MAX_VOLT - B_OCV_VOLT_BASE) / time_add_freq;
+                    }
+
+                    A_OCV_VOLT_BASE = A_OCV_VOLT_BASE + A_OCV_ADJUST_STEP;
+                    B_OCV_VOLT_BASE = B_OCV_VOLT_BASE + B_OCV_ADJUST_STEP;
+
+                    A_ES_VOLT_BASE = A_ES_VOLT_BASE + A_ES_ADJUST_STEP;
+                    B_ES_VOLT_BASE = B_ES_VOLT_BASE + B_ES_ADJUST_STEP;
+
+
+                }
+            }
+
+            if (PCS_DIRECT == 2)
+            {
+
+                if (A_ES_VOLT_BASE < A_ES_MIN_VOLT)
+                {
+                    A_ES_VOLT_BASE = A_ES_MIN_VOLT;
+                }
+
+                if (B_ES_VOLT_BASE < B_ES_MIN_VOLT)
+                {
+                    B_ES_VOLT_BASE = B_ES_MIN_VOLT;
+                }
+
+                if (A_ES_VOLT_BASE == A_ES_MIN_VOLT && B_ES_VOLT_BASE == B_ES_MIN_VOLT)
+                {
+                    A_ES_ADJUST_STEP = 0.0;
+                    B_ES_ADJUST_STEP = 0.0;
+
+                    A_OCV_ADJUST_STEP = 0.0;
+                    B_OCV_ADJUST_STEP = 0.0;
+
+                    hslTitle1.TextRight = "放电完成";
+                    hslTitle1.RightTextColor = Color.Cyan;
+                    DISCHARGE_TICK_CNT = 0;
+
+                    timer4.Stop();
+                }
+                else
+                {
+                    DISCHARGE_TICK_CNT++;
+
+                    LogHelper.Logger.Info("电操作步数:" + DISCHARGE_TICK_CNT);
+
+                    if (A_ES_ADJUST_STEP == 0.0)
+                    {
+                        A_ES_ADJUST_STEP = (A_ES_MAX_VOLT - A_ES_MIN_VOLT) / time_add_freq;
+                    }
+
+                    if (B_ES_ADJUST_STEP == 0.0)
+                    {
+                        B_ES_ADJUST_STEP = (B_ES_MAX_VOLT - B_ES_MIN_VOLT) / time_add_freq;
+                    }
+
+                    if (A_OCV_ADJUST_STEP == 0.0)
+                    {
+                        A_OCV_ADJUST_STEP = (A_OCV_MAX_VOLT - A_OCV_MIN_VOLT) / time_add_freq;
+                    }
+
+                    if (B_OCV_ADJUST_STEP == 0.0)
+                    {
+                        B_OCV_ADJUST_STEP = (B_OCV_MAX_VOLT - B_OCV_MIN_VOLT) / time_add_freq;
+                    }
+
+                    A_OCV_VOLT_BASE = A_OCV_VOLT_BASE - A_OCV_ADJUST_STEP;
+                    B_OCV_VOLT_BASE = B_OCV_VOLT_BASE - B_OCV_ADJUST_STEP;
+
+                    A_ES_VOLT_BASE = A_ES_VOLT_BASE - A_ES_ADJUST_STEP;
+                    B_ES_VOLT_BASE = B_ES_VOLT_BASE - B_ES_ADJUST_STEP;
+                }
+            }
+            EstackAndOcvVoltUpdateShow();
+            Update_RTU_Regs();
         }
     }
 }
