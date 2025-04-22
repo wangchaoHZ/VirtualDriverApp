@@ -11,6 +11,7 @@ using FluentModbus;
 using Modbus;
 using Newtonsoft.Json;
 using NLog;
+using System.Speech.Synthesis;
 
 namespace VirtualDriverApp
 {
@@ -26,7 +27,10 @@ namespace VirtualDriverApp
         private ModbusTcpClient DO_ModbusClient;
         private byte DO_ModbusClient_ID = 2;
 
+        private ModbusTcpClient DI_ModbusClient;
+        private byte DI_ModbusClient_ID = 3;
 
+        //SpeechSynthesizer synth = new SpeechSynthesizer();
         public Form1()
         {
             InitializeComponent();
@@ -60,6 +64,8 @@ namespace VirtualDriverApp
         private double N1_Cur;
         private double P2_Cur;
         private double N2_Cur;
+
+        private ushort[] DI_InputRegisters = new ushort[32];
 
         private double PN1_PRESS_DIFF;
         private double PN2_PRESS_DIFF;
@@ -445,6 +451,8 @@ namespace VirtualDriverApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            // W:1940
+            // H:1080
             this.FormBorderStyle = FormBorderStyle.None;
 
             LogHelper.Logger.Info("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -465,10 +473,12 @@ namespace VirtualDriverApp
             AI01_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
             AI02_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
             DO_ModbusClient = new ModbusTcpClient();   // 使用无参数构造函数
+            DI_ModbusClient = new ModbusTcpClient();   // 使用无参数构造函数
 
             AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
             AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
             DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);    // 端口可能会自动设置，或者你需要使用其他方式设置端口
+            DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);    // 端口可能会自动设置，或者你需要使用其他方式设置端口
 
             ushort[] values_buff =
             {
@@ -483,9 +493,6 @@ namespace VirtualDriverApp
             };
 
             DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
-
-            timer2.Start();
-            timer3.Start();
 
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -507,6 +514,24 @@ namespace VirtualDriverApp
             slave2.SetHoldingRegister(0, 0);  // 设置从站22的寄存器0初始值
             slave3.SetHoldingRegister(0, 0);  // 设置从站33的寄存器0初始值
             slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
+
+            timer2.Start();
+            timer3.Start();
+
+            //// 查看系统支持的语音
+            //Console.WriteLine("系统支持的语音：");
+            //foreach (var voice in synth.GetInstalledVoices())
+            //{
+            //    var info = voice.VoiceInfo;
+            //    Console.WriteLine($"Name: {info.Name}, Culture: {info.Culture}");
+            //}
+
+            //// 选择中文语音（例如 Microsoft Huihui）
+            //synth.SelectVoice("Microsoft Huihui Desktop"); // 或 "Microsoft Hanhan Desktop"
+
+            //// 设置语速和音量（可选）
+            //synth.Rate = 0;   // -10 到 10
+            //synth.Volume = 100; // 0 - 100
         }
 
         private int slave1_last_randomv = 0;
@@ -687,6 +712,15 @@ namespace VirtualDriverApp
             textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
             textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
 
+            textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
+            textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+
+            textBox14.Text = P1_FV_Show.ToString("F3") + "m³/h";
+            textBox13.Text = N1_FV_Show.ToString("F3") + "m³/h";
+
+            textBox16.Text = P2_FV_Show.ToString("F3") + "m³/h";
+            textBox18.Text = N2_FV_Show.ToString("F3") + "m³/h";
+
             double flow_sensor_max = 70.0;
             double press_sensor_max = 0.34;
 
@@ -728,9 +762,12 @@ namespace VirtualDriverApp
             ushort P2_CYG_TEMP = (ushort)(((trackBar10.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
             ushort N2_CYG_TEMP = (ushort)(((trackBar9.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
 
-            ushort P1_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
-            ushort P2_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
-            ushort POWER_BOX_H2_SET = (ushort)((12000 / 40000) * 16000.0 + 4000.0);
+            ushort P1_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
+            ushort P2_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
+            //  
+            ushort POWER_BOX_H2_SET = (ushort)((10000.0 / 40000.0) * 16000.0 + 4000.0);
+
+            //Console.WriteLine("P1_H2_SET"+ P1_H2_SET);
 
             //发送 Modbus 请求到一个新线程
             await Task.Run(() =>
@@ -760,7 +797,15 @@ namespace VirtualDriverApp
                     N2_FV_SET,
                     P2_FV_SET,
                     N2_PV_SET,
-                    P2_PV_SET
+                    P2_PV_SET,
+                    0,
+                    0,
+                    0,
+                    0,
+                    12000,
+                    POWER_BOX_H2_SET,
+                    12000,
+                    10000,
                 };
 
                 AI02_ModbusClient.WriteMultipleRegisters(AI02_ModbusClient_ID, startAddress, values_buff);
@@ -944,6 +989,104 @@ namespace VirtualDriverApp
 
             EstackAndOcvVoltUpdateShow();
             Update_RTU_Regs();
+
+            Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32);
+
+            for (int i = 0; i < 32; i++)
+            {
+                DI_InputRegisters[i] = (ushort)((diWordSpan[i * 2] << 8) | diWordSpan[i * 2 + 1]);
+            }
+
+            string result = string.Join(", ", DI_InputRegisters);
+            Console.WriteLine("Input Registers: " + result);
+
+            LogHelper.Logger.Info("DI模块采集:" + result);
+
+            if (DI_InputRegisters[13] == 1)
+            {
+                hslMoveText1.Text = "PCS连锁已建立";
+                hslMoveText1.ForeColor = Color.Lime;
+            }
+            else
+            {
+                hslMoveText1.Text = "PCS连锁未建立";
+                hslMoveText1.ForeColor = Color.Red;
+            }
+
+            // 制冷机开关状态
+            if (DI_InputRegisters[15] == 1)
+            {
+                panel6.BackColor = Color.Lime;
+                //synth.Speak("制冷机开");
+            }
+            else
+            {
+                panel6.BackColor = Color.Tomato;
+                //synth.Speak("制冷机关");
+            }
+
+            if (DI_InputRegisters[16] == 1)
+            {
+                panel2.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel2.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[17] == 1)
+            {
+                panel7.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel7.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[18] == 1)
+            {
+                panel4.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel4.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[19] == 1)
+            {
+                panel11.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel11.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[20] == 1)
+            {
+                panel9.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel9.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[23] == 1)
+            {
+                panel13.BackColor = Color.Lime;
+            }
+            else
+            {
+                panel13.BackColor = Color.Tomato;
+            }
+
+            if (DI_InputRegisters[24] == 1)
+            {
+                //panel12.BackColor = Color.Lime;
+            }
+            else
+            {
+                //panel12.BackColor = Color.Tomato;
+            }
         }
 
         private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
@@ -979,12 +1122,12 @@ namespace VirtualDriverApp
         {
             if (checkBox14.Checked)
             {
-                Branch_Cur1 = 1000;
+                Branch_Cur1_BASE = 1000;
                 //Branch_Cur2 = 1500;
             }
             else
             {
-                Branch_Cur1 = 0;
+                Branch_Cur1_BASE = 0;
                 //Branch_Cur2 = 0;
             }
         }
@@ -1001,25 +1144,35 @@ namespace VirtualDriverApp
 
         private void hslButton8_Click(object sender, EventArgs e)
         {
-            //string selectedPort = "COM3";
-            // 设置串口配置
-            ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-            Thread.Sleep(200);
-            // 启动共享的 Modbus 线程
-            ModbusRtuSlave.Start();
 
-            //string VBTPort = "COM5";
-            // 设置串口配置
-            ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-            Thread.Sleep(100);
-            // 启动共享的 Modbus 线程
-            ModbusRtuSlaveVBT.Start();
+            if (hslButton8.Text == "启动模拟器")
+            {
+                //string selectedPort = "COM3";
+                // 设置串口配置
+                ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
+                Thread.Sleep(200);
+                // 启动共享的 Modbus 线程
+                ModbusRtuSlave.Start();
 
-            Thread.Sleep(300);
-            timer1.Enabled = true;
-            timer2.Enabled = true;
+                //string VBTPort = "COM5";
+                // 设置串口配置
+                ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
+                Thread.Sleep(100);
+                // 启动共享的 Modbus 线程
+                ModbusRtuSlaveVBT.Start();
 
-            hslButton8.OriginalColor = Color.Lime;
+                Thread.Sleep(300);
+                timer1.Enabled = true;
+                timer2.Enabled = true;
+
+                hslButton8.OriginalColor = Color.Lime;
+
+                hslButton8.Text = "关闭模拟器";
+            }
+            else if (hslButton8.Text == "关闭模拟器")
+            {
+                Application.Exit();
+            }
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -1078,6 +1231,7 @@ namespace VirtualDriverApp
             hslButton1.OriginalColor = Color.DimGray;
             hslButton2.OriginalColor = Color.DimGray;
             hslButton3.OriginalColor = Color.Lime;
+            hslTitle1.TextRight = "系统空转";
             timer4.Stop();
         }
 
@@ -1160,15 +1314,15 @@ namespace VirtualDriverApp
 
         private void checkBox15_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBox14.Checked)
+            if (checkBox15.Checked)
             {
                 //Branch_Cur1 = 1500;
-                Branch_Cur2 = 1000;
+                Branch_Cur2_BASE = 1000;
             }
             else
             {
                 //Branch_Cur1 = 0;
-                Branch_Cur2 = 0;
+                Branch_Cur2_BASE = 0;
             }
         }
 
@@ -1200,8 +1354,8 @@ namespace VirtualDriverApp
         double A_ES_ADJUST_STEP = 0.0;
         double B_ES_ADJUST_STEP = 0.0;
 
-        double A_ES_MAX_VOLT = 82.5;
-        double B_ES_MAX_VOLT = 82.8;
+        double A_ES_MAX_VOLT = 80.5;
+        double B_ES_MAX_VOLT = 80.8;
 
         double A_ES_MIN_VOLT = 11.6;
         double B_ES_MIN_VOLT = 11.9;
@@ -1217,10 +1371,22 @@ namespace VirtualDriverApp
 
         int CHARGE_TICK_CNT = 0;
         int DISCHARGE_TICK_CNT = 0;
+
+        UInt32 ChargeAddCount = 0;
+        UInt32 DischargeAddCount = 0;
         private void timer4_Tick(object sender, EventArgs e)
         {
 
             float time_add_freq = 300.0F;
+
+            if (checkBox13.Checked)
+            {
+                label10.Text = "循环：" + ChargeAddCount.ToString() + " " + DischargeAddCount.ToString();
+            }
+            else
+            {
+                label10.Text = string.Empty;
+            }
 
             if (PCS_DIRECT == 1)
             {
@@ -1247,7 +1413,27 @@ namespace VirtualDriverApp
                     hslTitle1.RightTextColor = Color.Lime;
                     CHARGE_TICK_CNT = 0;
 
-                    timer4.Stop();
+                    hslProgressColorful1.Value = 1000;
+
+                    if (checkBox13.Checked)
+                    {
+                        Thread.Sleep(5000);
+                        {
+                            PCS_DIRECT = 2;
+                            Branch_Cur1_BASE = -(float)388.7;
+                            Branch_Cur2_BASE = -(float)386.5;
+                            hslButton1.OriginalColor = Color.DimGray;
+                            hslButton2.OriginalColor = Color.Lime;
+                            hslButton3.OriginalColor = Color.DimGray;
+                            ChargeAddCount++;
+                            hslTitle1.TextRight = "放电运行中";
+                            hslTitle1.RightTextColor = Color.Cyan;
+                        }
+                    }
+                    else
+                    {
+                        timer4.Stop();
+                    }
                 }
                 else
                 {
@@ -1310,7 +1496,26 @@ namespace VirtualDriverApp
                     hslTitle1.RightTextColor = Color.Cyan;
                     DISCHARGE_TICK_CNT = 0;
 
-                    timer4.Stop();
+                    hslProgressColorful1.Value = 0;
+
+                    if (checkBox13.Checked)
+                    {
+                        Thread.Sleep(5000);
+
+                        PCS_DIRECT = 1;
+                        hslTitle1.TextRight = "充电运行中";
+                        hslTitle1.RightTextColor = Color.Lime;
+                        Branch_Cur1_BASE = (float)372.7;
+                        Branch_Cur2_BASE = (float)376.5;
+                        hslButton1.OriginalColor = Color.Lime;
+                        hslButton2.OriginalColor = Color.DimGray;
+                        hslButton3.OriginalColor = Color.DimGray;
+                        DischargeAddCount++;
+                    }
+                    else
+                    {
+                        timer4.Stop();
+                    }
                 }
                 else
                 {
@@ -1347,6 +1552,16 @@ namespace VirtualDriverApp
             }
             EstackAndOcvVoltUpdateShow();
             Update_RTU_Regs();
+        }
+
+        private void textBox10_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label11_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
