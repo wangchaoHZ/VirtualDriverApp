@@ -1026,9 +1026,9 @@
             this.label49.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
             this.label49.Location = new System.Drawing.Point(636, 371);
             this.label49.Name = "label49";
-            this.label49.Size = new System.Drawing.Size(169, 26);
+            this.label49.Size = new System.Drawing.Size(188, 26);
             this.label49.TabIndex = 62;
-            this.label49.Text = "P2出堆温度（℃）";
+            this.label49.Text = "P2进堆前温度（℃）";
             // 
             // label50
             // 
@@ -1036,9 +1036,9 @@
             this.label50.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
             this.label50.Location = new System.Drawing.Point(936, 371);
             this.label50.Name = "label50";
-            this.label50.Size = new System.Drawing.Size(173, 26);
+            this.label50.Size = new System.Drawing.Size(192, 26);
             this.label50.TabIndex = 64;
-            this.label50.Text = "N2出堆温度（℃）";
+            this.label50.Text = "N2进堆前温度（℃）";
             // 
             // textBox37
             // 
@@ -1072,9 +1072,9 @@
             this.label51.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
             this.label51.Location = new System.Drawing.Point(38, 371);
             this.label51.Name = "label51";
-            this.label51.Size = new System.Drawing.Size(169, 26);
+            this.label51.Size = new System.Drawing.Size(188, 26);
             this.label51.TabIndex = 58;
-            this.label51.Text = "P1出堆温度（℃）";
+            this.label51.Text = "P1进堆前温度（℃）";
             // 
             // label52
             // 
@@ -1082,9 +1082,9 @@
             this.label52.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
             this.label52.Location = new System.Drawing.Point(336, 371);
             this.label52.Name = "label52";
-            this.label52.Size = new System.Drawing.Size(173, 26);
+            this.label52.Size = new System.Drawing.Size(192, 26);
             this.label52.TabIndex = 60;
-            this.label52.Text = "N1出堆温度（℃）";
+            this.label52.Text = "N1进堆前温度（℃）";
             // 
             // textBox39
             // 
@@ -1751,7 +1751,7 @@
             this.hslTitle1.RightTextColor = System.Drawing.Color.White;
             this.hslTitle1.Size = new System.Drawing.Size(1925, 65);
             this.hslTitle1.TabIndex = 56;
-            this.hslTitle1.Text = "全钒液流电池系统模拟终端V3.0";
+            this.hslTitle1.Text = "全钒液流电池系统模拟终端（SDEE）";
             this.hslTitle1.TextRight = "运行状态";
             // 
             // timer3

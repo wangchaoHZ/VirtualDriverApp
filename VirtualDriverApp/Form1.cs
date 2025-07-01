@@ -756,11 +756,13 @@ namespace VirtualDriverApp
             LogHelper.Logger.Info("P2电解液温度(mA):" + P2_DJY_TEMP + " N2电解液温度(mA):" + N2_DJY_TEMP);
             LogHelper.Logger.Info("---------------------------------------------");
 
+            double cyg_temp_sensor_range = 100.0;
+            double cyg_temp_sensor_min = 0.0;
             //
-            ushort P1_CHG_TEMP = (ushort)(((trackBar12.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
-            ushort N1_CYG_TEMP = (ushort)(((trackBar11.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
-            ushort P2_CYG_TEMP = (ushort)(((trackBar10.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
-            ushort N2_CYG_TEMP = (ushort)(((trackBar9.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
+            ushort P1_CYG_TEMP = (ushort)(((trackBar12.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N1_CYG_TEMP = (ushort)(((trackBar11.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
+            ushort P2_CYG_TEMP = (ushort)(((trackBar10.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
+            ushort N2_CYG_TEMP = (ushort)(((trackBar9.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
 
             ushort P1_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
             ushort P2_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
@@ -778,15 +780,15 @@ namespace VirtualDriverApp
                 {
                     P1_PV_SET,
                     N1_PV_SET,
+                    P1_CYG_TEMP,
+                    N1_CYG_TEMP,
+                    P1_DJY_TEMP,
+                    N1_DJY_TEMP,
                     P1_FV_SET,
                     N1_FV_SET,
-                    P1_DJY_TEMP,
-                    0,
-                    N1_DJY_TEMP,
-                    P1_H2_SET,
-                    P2_H2_SET,
+                    N2_FV_SET,
+                    P2_FV_SET,
                     N2_DJY_TEMP,
-                    0,
                     P2_DJY_TEMP
                 };
 
@@ -794,18 +796,18 @@ namespace VirtualDriverApp
 
                 ushort[] values_buff =
                 {
-                    N2_FV_SET,
-                    P2_FV_SET,
+                    N2_CYG_TEMP,
+                    P2_CYG_TEMP,
                     N2_PV_SET,
                     P2_PV_SET,
                     0,
                     0,
                     0,
                     0,
-                    12000,
-                    POWER_BOX_H2_SET,
-                    12000,
-                    10000,
+                    0,
+                    8000,
+                    0,
+                    0,
                 };
 
                 AI02_ModbusClient.WriteMultipleRegisters(AI02_ModbusClient_ID, startAddress, values_buff);
@@ -1002,7 +1004,7 @@ namespace VirtualDriverApp
 
             LogHelper.Logger.Info("DI模块采集:" + result);
 
-            if (DI_InputRegisters[13] == 1)
+            if (DI_InputRegisters[1] == 1)
             {
                 hslMoveText1.Text = "PCS连锁已建立";
                 hslMoveText1.ForeColor = Color.Lime;
