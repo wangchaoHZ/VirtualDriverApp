@@ -121,7 +121,8 @@ namespace VirtualDriverApp
             Volt_A_Slave.SetHoldingRegister(44, 0);//8
             Volt_A_Slave.SetHoldingRegister(45, A_CURRENT_VOLT);//9电流通道
             Volt_A_Slave.SetHoldingRegister(46, (ushort)(A_OCV * 10000));//10
-            Volt_A_Slave.SetHoldingRegister(47, A_CURRENT_VOLT);//11
+            Volt_A_Slave.SetHoldingRegister(47, A_CURRENT_VOLT);//12
+            Volt_A_Slave.SetHoldingRegister(48, A_CURRENT_VOLT);//13
 
             ushort B_Max_Total_V = (ushort)Math.Max((B_ES_VOLT[0] + B_ES_VOLT[1] + B_ES_VOLT[2]), (B_ES_VOLT[3] + B_ES_VOLT[4] + B_ES_VOLT[5]));
 
@@ -137,6 +138,7 @@ namespace VirtualDriverApp
             Volt_B_Slave.SetHoldingRegister(45, B_CURRENT_VOLT);
             Volt_B_Slave.SetHoldingRegister(46, (ushort)(B_OCV * 10000));
             Volt_B_Slave.SetHoldingRegister(47, B_CURRENT_VOLT);
+            Volt_B_Slave.SetHoldingRegister(48, B_CURRENT_VOLT);
 
             Total_Volt = (float)(A_Max_Total_V + B_Max_Total_V);
         }
@@ -453,7 +455,7 @@ namespace VirtualDriverApp
         {
             // W:1940
             // H:1080
-            this.FormBorderStyle = FormBorderStyle.None;
+            //this.FormBorderStyle = FormBorderStyle.None;
 
             LogHelper.Logger.Info("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
@@ -498,8 +500,10 @@ namespace VirtualDriverApp
 
             PN1_PRESS_DIFF = 0.0;
             PN2_PRESS_DIFF = 0.0;
-            PN1_FLOW_DIFF = 0.0;
-            PN2_FLOW_DIFF = 0.0;
+
+            PN1_FLOW_DIFF  = 0.0;
+            PN2_FLOW_DIFF  = 0.0;
+
             textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
             textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
@@ -510,28 +514,15 @@ namespace VirtualDriverApp
             TemperatureInit();
 
             // 为每个从站设置保持寄存器的初始值
-            slave1.SetHoldingRegister(0, 0);  // 设置从站11的寄存器0初始值
-            slave2.SetHoldingRegister(0, 0);  // 设置从站22的寄存器0初始值
-            slave3.SetHoldingRegister(0, 0);  // 设置从站33的寄存器0初始值
-            slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
+            slave1.SetHoldingRegister(0, 0);  // - 设置从站11的寄存器0初始值
+            slave2.SetHoldingRegister(0, 0);  // - 设置从站22的寄存器0初始值
+            slave3.SetHoldingRegister(0, 0);  // - 设置从站33的寄存器0初始值
+            slave4.SetHoldingRegister(0, 0);  // - 设置从站44的寄存器0初始值
 
+            // 
             timer2.Start();
+            // 
             timer3.Start();
-
-            //// 查看系统支持的语音
-            //Console.WriteLine("系统支持的语音：");
-            //foreach (var voice in synth.GetInstalledVoices())
-            //{
-            //    var info = voice.VoiceInfo;
-            //    Console.WriteLine($"Name: {info.Name}, Culture: {info.Culture}");
-            //}
-
-            //// 选择中文语音（例如 Microsoft Huihui）
-            //synth.SelectVoice("Microsoft Huihui Desktop"); // 或 "Microsoft Hanhan Desktop"
-
-            //// 设置语速和音量（可选）
-            //synth.Rate = 0;   // -10 到 10
-            //synth.Volume = 100; // 0 - 100
         }
 
         private int slave1_last_randomv = 0;
@@ -933,24 +924,14 @@ namespace VirtualDriverApp
 
         private void label30_Click(object sender, EventArgs e)
         {
-
         }
 
         private void hslProgressColorful1_Load(object sender, EventArgs e)
         {
-
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            //panel1.BackColor=Color.Lime;
-            //hslSwitch1.SwitchStatus = true;
-            //hslSwitch1.SwitchBackground = Color.Lime;
-        }
-
-        private void hslSwitch8_OnSwitchChanged(object arg1, bool arg2)
-        {
-
         }
 
         //private 
@@ -982,14 +963,15 @@ namespace VirtualDriverApp
             hslProgressColorful1.Value = (int)(A_SOC * 100);
             hslProgressColorful2.Value = (int)(B_SOC * 100);
 
-            Console.WriteLine("---------------->" + A_SOC);
-            Console.WriteLine("---------------->" + B_SOC);
+            Console.WriteLine("< @A SOC >:" + A_SOC);
+            Console.WriteLine("< @B SOC >:" + B_SOC);
 
             Branch_Cur_UpdateShow();
 
             TemperatureUpdateShow();
 
             EstackAndOcvVoltUpdateShow();
+
             Update_RTU_Regs();
 
             Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32);
