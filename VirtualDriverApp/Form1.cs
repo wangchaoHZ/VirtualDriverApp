@@ -318,9 +318,9 @@ namespace VirtualDriverApp
 
             // 设置从站地址、寄存器地址和要写入的值
             //string portName = "COM16";  // 根据实际情况修改串口号
-            string portName = comboBox2.SelectedItem?.ToString();
-            byte slaveAddress = 1;  // 从站地址
-            ushort registerAddress = 10;  // 寄存器地址
+            //string portName = comboBox2.SelectedItem?.ToString();
+            //byte slaveAddress = 1;  // 从站地址
+            //ushort registerAddress = 10;  // 寄存器地址
 
             double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
             double N1_PV_Show = ((N1_Cur / 15.0) * (press_max)) + PN1_PRESS_DIFF;
@@ -331,15 +331,6 @@ namespace VirtualDriverApp
             double N1_FV_Show = ((N1_Cur / 15.0) * (flow_max)) + PN1_FLOW_DIFF;
             double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
             double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max)) + PN2_FLOW_DIFF;
-
-
-
-
-            //textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
-            //textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
-
-            //textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
-            //textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
             textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
             textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
@@ -377,17 +368,17 @@ namespace VirtualDriverApp
             ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
 
             // 发送 Modbus 请求到一个新线程
-            await Task.Run(() =>
-            {
-                SendModbusRequest(portName, 10, P1_PV_SET);
-                SendModbusRequest(portName, 11, N1_PV_SET);
-                SendModbusRequest(portName, 14, P2_PV_SET);
-                SendModbusRequest(portName, 15, N2_PV_SET);
-                SendModbusRequest(portName, 12, P1_FV_SET);
-                SendModbusRequest(portName, 13, N1_FV_SET);
-                SendModbusRequest(portName, 16, P2_FV_SET);
-                SendModbusRequest(portName, 17, N2_FV_SET);
-            });
+            //await Task.Run(() =>
+            //{
+            //    SendModbusRequest(portName, 10, P1_PV_SET);
+            //    SendModbusRequest(portName, 11, N1_PV_SET);
+            //    SendModbusRequest(portName, 14, P2_PV_SET);
+            //    SendModbusRequest(portName, 15, N2_PV_SET);
+            //    SendModbusRequest(portName, 12, P1_FV_SET);
+            //    SendModbusRequest(portName, 13, N1_FV_SET);
+            //    SendModbusRequest(portName, 16, P2_FV_SET);
+            //    SendModbusRequest(portName, 17, N2_FV_SET);
+            //});
         }
 
         // 封装发送 Modbus 请求的代码
