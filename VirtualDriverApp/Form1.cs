@@ -12,6 +12,8 @@ using Modbus;
 using Newtonsoft.Json;
 using NLog;
 using System.Speech.Synthesis;
+using System.Net.NetworkInformation;
+
 
 namespace VirtualDriverApp
 {
@@ -225,7 +227,7 @@ namespace VirtualDriverApp
             {
                 for (int i = 0; i < A_ES_VOLT.Length; i++)
                 {
-                    A_ES_VOLT[i] = A_ES_VOLT_BASE + +RandomFloatGenerator();
+                    A_ES_VOLT[i] = A_ES_VOLT_BASE + RandomFloatGenerator();
                 }
             }
 
@@ -456,31 +458,64 @@ namespace VirtualDriverApp
             // W:1940
             // H:1080
             //this.FormBorderStyle = FormBorderStyle.None;
-
+            // 记录启动信息
             LogHelper.Logger.Info("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
+            // 配置文件路径和加载
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppConfig.json");
             AppConfig config = ConfigLoader.LoadConfig(configPath);
 
-            Console.WriteLine($"串口1: {config.VFBDevice.PortName}");
-            Console.WriteLine($"AI模块2地址: {config.AIModule2.IPAddress}");
+            // 配置完整性检查
+            if (config == null || config.VFBDevice == null || config.VoltDevice == null)
+            {
+                MessageBox.Show("AppConfig配置文件异常或缺失关键节点！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
+            // 提取串口与IP
             VFD_COM_PORT = config.VFBDevice.PortName;
             VBT_COM_PORT = config.VoltDevice.PortName;
 
+            string[] modbusIps = { "192.168.1.133", "192.168.1.134", "192.168.1.131", "192.168.1.132" };
+            string[] ipDesc = { "AI01模块", "AI02模块", "DO模块", "DI模块" };
+
+            // 检查各IP是否可达
+            for (int i = 0; i < modbusIps.Length; i++)
+            {
+                Ping pingSender = new Ping();
+                try
+                {
+                    PingReply reply = pingSender.Send(modbusIps[i], 800);
+                    if (reply.Status != IPStatus.Success)
+                    {
+                        string msg = string.Format("{0} IP({1}) 不可达，请检查网络！", ipDesc[i], modbusIps[i]);
+                        LogHelper.Logger.Error(msg);
+                        MessageBox.Show(msg, "网络错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        //return; // 如需强制终止，取消注释
+                    }
+                }
+                catch (Exception ex)
+                {
+                    string msg = string.Format("{0} IP({1}) 检测异常: {2}", ipDesc[i], modbusIps[i], ex.Message);
+                    LogHelper.Logger.Error(msg);
+                    MessageBox.Show(msg, "网络异常", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    //return;
+                }
+            }
+
             LogHelper.Logger.Info("变频器通讯端口:" + VFD_COM_PORT + " 电压板通讯端口:" + VBT_COM_PORT);
 
+            // ModbusTcpClient实例化
+            AI01_ModbusClient = new ModbusTcpClient();
+            AI02_ModbusClient = new ModbusTcpClient();
+            DO_ModbusClient = new ModbusTcpClient();
+            DI_ModbusClient = new ModbusTcpClient();
 
-            // 创建 ModbusTcpClient 实例
-            AI01_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
-            AI02_ModbusClient = new ModbusTcpClient(); // 使用无参数构造函数
-            DO_ModbusClient = new ModbusTcpClient();   // 使用无参数构造函数
-            DI_ModbusClient = new ModbusTcpClient();   // 使用无参数构造函数
-
-            AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
-            AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);  // 端口可能会自动设置，或者你需要使用其他方式设置端口
-            DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);    // 端口可能会自动设置，或者你需要使用其他方式设置端口
-            DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);    // 端口可能会自动设置，或者你需要使用其他方式设置端口
+            // 依次连接
+            AI01_ModbusClient.Connect(modbusIps[0], ModbusEndianness.BigEndian);
+            AI02_ModbusClient.Connect(modbusIps[1], ModbusEndianness.BigEndian);
+            DO_ModbusClient.Connect(modbusIps[2], ModbusEndianness.BigEndian);
+            DI_ModbusClient.Connect(modbusIps[3], ModbusEndianness.BigEndian);
 
             ushort[] values_buff =
             {
@@ -712,7 +747,7 @@ namespace VirtualDriverApp
             textBox16.Text = P2_FV_Show.ToString("F3") + "m³/h";
             textBox18.Text = N2_FV_Show.ToString("F3") + "m³/h";
 
-            double flow_sensor_max = 70.0;
+            double flow_sensor_max = 99.9;
             double press_sensor_max = 0.34;
 
             ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
