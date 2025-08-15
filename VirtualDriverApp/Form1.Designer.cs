@@ -79,8 +79,6 @@
             this.textBox13 = new System.Windows.Forms.TextBox();
             this.label17 = new System.Windows.Forms.Label();
             this.textBox14 = new System.Windows.Forms.TextBox();
-            this.label24 = new System.Windows.Forms.Label();
-            this.comboBox2 = new System.Windows.Forms.ComboBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.checkBox12 = new System.Windows.Forms.CheckBox();
             this.checkBox11 = new System.Windows.Forms.CheckBox();
@@ -99,9 +97,25 @@
             this.textBox18 = new System.Windows.Forms.TextBox();
             this.textBox19 = new System.Windows.Forms.TextBox();
             this.textBox20 = new System.Windows.Forms.TextBox();
-            this.textBox22 = new System.Windows.Forms.TextBox();
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.timer2 = new System.Windows.Forms.Timer(this.components);
+            this.label24 = new System.Windows.Forms.Label();
+            this.trackBar4 = new System.Windows.Forms.TrackBar();
+            this.label25 = new System.Windows.Forms.Label();
+            this.label26 = new System.Windows.Forms.Label();
+            this.label27 = new System.Windows.Forms.Label();
+            this.label28 = new System.Windows.Forms.Label();
+            this.textBox22 = new System.Windows.Forms.TextBox();
+            this.textBox23 = new System.Windows.Forms.TextBox();
+            this.trackBar1 = new System.Windows.Forms.TrackBar();
+            this.label29 = new System.Windows.Forms.Label();
+            this.label30 = new System.Windows.Forms.Label();
+            this.button3 = new System.Windows.Forms.Button();
+            this.button4 = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
+            this.label31 = new System.Windows.Forms.Label();
+            this.label32 = new System.Windows.Forms.Label();
+            this.timer3 = new System.Windows.Forms.Timer(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -109,6 +123,8 @@
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.groupBox5.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar4)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             this.SuspendLayout();
             // 
             // textBox1
@@ -129,7 +145,7 @@
             // 
             this.button1.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button1.ForeColor = System.Drawing.Color.Black;
-            this.button1.Location = new System.Drawing.Point(1599, 344);
+            this.button1.Location = new System.Drawing.Point(1606, 228);
             this.button1.Margin = new System.Windows.Forms.Padding(4);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(356, 69);
@@ -501,9 +517,9 @@
             this.label9.Location = new System.Drawing.Point(660, 40);
             this.label9.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(633, 58);
+            this.label9.Size = new System.Drawing.Size(625, 58);
             this.label9.TabIndex = 10;
-            this.label9.Text = "BMS 变频器模拟终端（V3.0）";
+            this.label9.Text = "BMS 变频器模拟终端（RKP）";
             this.label9.Click += new System.EventHandler(this.label9_Click);
             // 
             // label10
@@ -511,7 +527,7 @@
             this.label10.AutoSize = true;
             this.label10.Font = new System.Drawing.Font("微软雅黑", 21.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.label10.Location = new System.Drawing.Point(1596, 49);
+            this.label10.Location = new System.Drawing.Point(1597, 49);
             this.label10.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(158, 50);
@@ -522,7 +538,7 @@
             // 
             this.button2.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button2.ForeColor = System.Drawing.Color.Black;
-            this.button2.Location = new System.Drawing.Point(1599, 452);
+            this.button2.Location = new System.Drawing.Point(1606, 305);
             this.button2.Margin = new System.Windows.Forms.Padding(4);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(356, 69);
@@ -548,7 +564,7 @@
             this.comboBox1.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.comboBox1.ForeColor = System.Drawing.Color.Black;
             this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(1769, 263);
+            this.comboBox1.Location = new System.Drawing.Point(1771, 176);
             this.comboBox1.Margin = new System.Windows.Forms.Padding(4);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(184, 32);
@@ -559,7 +575,7 @@
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label11.ForeColor = System.Drawing.Color.Black;
-            this.label11.Location = new System.Drawing.Point(1611, 260);
+            this.label11.Location = new System.Drawing.Point(1611, 176);
             this.label11.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(134, 31);
@@ -569,10 +585,10 @@
             // pictureBox2
             // 
             this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
-            this.pictureBox2.Location = new System.Drawing.Point(1769, 13);
+            this.pictureBox2.Location = new System.Drawing.Point(1771, 40);
             this.pictureBox2.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(133, 125);
+            this.pictureBox2.Size = new System.Drawing.Size(80, 70);
             this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox2.TabIndex = 17;
             this.pictureBox2.TabStop = false;
@@ -730,30 +746,6 @@
             this.textBox14.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.textBox14.TextChanged += new System.EventHandler(this.textBox14_TextChanged);
             // 
-            // label24
-            // 
-            this.label24.AutoSize = true;
-            this.label24.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label24.ForeColor = System.Drawing.Color.Black;
-            this.label24.Location = new System.Drawing.Point(1611, 204);
-            this.label24.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(134, 31);
-            this.label24.TabIndex = 45;
-            this.label24.Text = "传感器端口";
-            // 
-            // comboBox2
-            // 
-            this.comboBox2.BackColor = System.Drawing.Color.White;
-            this.comboBox2.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.comboBox2.ForeColor = System.Drawing.Color.Black;
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(1769, 203);
-            this.comboBox2.Margin = new System.Windows.Forms.Padding(4);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(184, 32);
-            this.comboBox2.TabIndex = 44;
-            // 
             // groupBox5
             // 
             this.groupBox5.Controls.Add(this.checkBox12);
@@ -786,11 +778,11 @@
             this.groupBox5.Controls.Add(this.textBox12);
             this.groupBox5.Controls.Add(this.label17);
             this.groupBox5.Font = new System.Drawing.Font("微软雅黑", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.groupBox5.Location = new System.Drawing.Point(19, 557);
+            this.groupBox5.Location = new System.Drawing.Point(16, 528);
             this.groupBox5.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.groupBox5.Size = new System.Drawing.Size(1562, 419);
+            this.groupBox5.Size = new System.Drawing.Size(1565, 419);
             this.groupBox5.TabIndex = 46;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "关联传感器";
@@ -1008,40 +1000,235 @@
             this.textBox20.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.textBox20.TextChanged += new System.EventHandler(this.textBox20_TextChanged);
             // 
-            // textBox22
-            // 
-            this.textBox22.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
-            this.textBox22.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.textBox22.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
-            this.textBox22.Location = new System.Drawing.Point(1599, 574);
-            this.textBox22.Margin = new System.Windows.Forms.Padding(4);
-            this.textBox22.Multiline = true;
-            this.textBox22.Name = "textBox22";
-            this.textBox22.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBox22.Size = new System.Drawing.Size(355, 400);
-            this.textBox22.TabIndex = 47;
-            this.textBox22.Text = "LOG...";
-            // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(61, 4);
-            // 
             // timer2
             // 
             this.timer2.Interval = 500;
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
+            // 
+            // label24
+            // 
+            this.label24.AutoSize = true;
+            this.label24.Font = new System.Drawing.Font("微软雅黑", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label24.ForeColor = System.Drawing.Color.Red;
+            this.label24.Location = new System.Drawing.Point(1610, 862);
+            this.label24.Name = "label24";
+            this.label24.Size = new System.Drawing.Size(255, 37);
+            this.label24.TabIndex = 47;
+            this.label24.Text = "PCS  设备连锁断开";
+            // 
+            // trackBar4
+            // 
+            this.trackBar4.Location = new System.Drawing.Point(465, 1017);
+            this.trackBar4.Maximum = 100;
+            this.trackBar4.Name = "trackBar4";
+            this.trackBar4.Size = new System.Drawing.Size(251, 56);
+            this.trackBar4.TabIndex = 50;
+            this.trackBar4.TickFrequency = 5;
+            this.trackBar4.Value = 2;
+            // 
+            // label25
+            // 
+            this.label25.AutoSize = true;
+            this.label25.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
+            this.label25.Location = new System.Drawing.Point(46, 966);
+            this.label25.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label25.Name = "label25";
+            this.label25.Size = new System.Drawing.Size(215, 31);
+            this.label25.TabIndex = 52;
+            this.label25.Text = "子1气泵电流（A）";
+            // 
+            // label26
+            // 
+            this.label26.AutoSize = true;
+            this.label26.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
+            this.label26.Location = new System.Drawing.Point(462, 966);
+            this.label26.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label26.Name = "label26";
+            this.label26.Size = new System.Drawing.Size(237, 31);
+            this.label26.TabIndex = 53;
+            this.label26.Text = "子1氢气浓度（LEL）";
+            // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
+            this.label27.Location = new System.Drawing.Point(862, 966);
+            this.label27.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(215, 31);
+            this.label27.TabIndex = 54;
+            this.label27.Text = "子1气泵电流（A）";
+            // 
+            // label28
+            // 
+            this.label28.AutoSize = true;
+            this.label28.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold);
+            this.label28.Location = new System.Drawing.Point(1269, 966);
+            this.label28.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label28.Name = "label28";
+            this.label28.Size = new System.Drawing.Size(237, 31);
+            this.label28.TabIndex = 55;
+            this.label28.Text = "子2氢气浓度（LEL）";
+            // 
+            // textBox22
+            // 
+            this.textBox22.BackColor = System.Drawing.Color.Black;
+            this.textBox22.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
+            this.textBox22.ForeColor = System.Drawing.Color.Lime;
+            this.textBox22.Location = new System.Drawing.Point(46, 1015);
+            this.textBox22.Margin = new System.Windows.Forms.Padding(4);
+            this.textBox22.Multiline = true;
+            this.textBox22.Name = "textBox22";
+            this.textBox22.Size = new System.Drawing.Size(247, 58);
+            this.textBox22.TabIndex = 56;
+            this.textBox22.Text = "气泵1";
+            this.textBox22.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // textBox23
+            // 
+            this.textBox23.BackColor = System.Drawing.Color.Black;
+            this.textBox23.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
+            this.textBox23.ForeColor = System.Drawing.Color.Lime;
+            this.textBox23.Location = new System.Drawing.Point(860, 1015);
+            this.textBox23.Margin = new System.Windows.Forms.Padding(4);
+            this.textBox23.Multiline = true;
+            this.textBox23.Name = "textBox23";
+            this.textBox23.Size = new System.Drawing.Size(247, 58);
+            this.textBox23.TabIndex = 57;
+            this.textBox23.Text = "气泵2";
+            this.textBox23.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // trackBar1
+            // 
+            this.trackBar1.Location = new System.Drawing.Point(1268, 1017);
+            this.trackBar1.Maximum = 100;
+            this.trackBar1.Name = "trackBar1";
+            this.trackBar1.Size = new System.Drawing.Size(251, 56);
+            this.trackBar1.TabIndex = 58;
+            this.trackBar1.TickFrequency = 5;
+            this.trackBar1.Value = 2;
+            // 
+            // label29
+            // 
+            this.label29.AutoSize = true;
+            this.label29.Font = new System.Drawing.Font("微软雅黑", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label29.ForeColor = System.Drawing.Color.Red;
+            this.label29.Location = new System.Drawing.Point(1610, 737);
+            this.label29.Name = "label29";
+            this.label29.Size = new System.Drawing.Size(258, 37);
+            this.label29.TabIndex = 59;
+            this.label29.Text = "子1负正混液关到位";
+            // 
+            // label30
+            // 
+            this.label30.AutoSize = true;
+            this.label30.Font = new System.Drawing.Font("微软雅黑", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label30.ForeColor = System.Drawing.Color.Red;
+            this.label30.Location = new System.Drawing.Point(1610, 797);
+            this.label30.Name = "label30";
+            this.label30.Size = new System.Drawing.Size(258, 37);
+            this.label30.TabIndex = 60;
+            this.label30.Text = "子2负正混液关到位";
+            // 
+            // button3
+            // 
+            this.button3.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.button3.ForeColor = System.Drawing.Color.Black;
+            this.button3.Location = new System.Drawing.Point(1606, 382);
+            this.button3.Margin = new System.Windows.Forms.Padding(4);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(356, 69);
+            this.button3.TabIndex = 61;
+            this.button3.Text = "外部急停 开启";
+            this.button3.UseVisualStyleBackColor = true;
+            // 
+            // button4
+            // 
+            this.button4.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.button4.ForeColor = System.Drawing.Color.Black;
+            this.button4.Location = new System.Drawing.Point(1606, 462);
+            this.button4.Margin = new System.Windows.Forms.Padding(4);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(356, 69);
+            this.button4.TabIndex = 62;
+            this.button4.Text = "门限位 开启";
+            this.button4.UseVisualStyleBackColor = true;
+            // 
+            // button5
+            // 
+            this.button5.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.button5.ForeColor = System.Drawing.Color.Black;
+            this.button5.Location = new System.Drawing.Point(1606, 618);
+            this.button5.Margin = new System.Windows.Forms.Padding(4);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(356, 69);
+            this.button5.TabIndex = 63;
+            this.button5.Text = "制冷机故障 开启";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // button6
+            // 
+            this.button6.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.button6.ForeColor = System.Drawing.Color.Black;
+            this.button6.Location = new System.Drawing.Point(1606, 540);
+            this.button6.Margin = new System.Windows.Forms.Padding(4);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(356, 69);
+            this.button6.TabIndex = 64;
+            this.button6.Text = "水浸故障 开启";
+            this.button6.UseVisualStyleBackColor = true;
+            // 
+            // label31
+            // 
+            this.label31.AutoSize = true;
+            this.label31.Font = new System.Drawing.Font("微软雅黑", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label31.ForeColor = System.Drawing.Color.Red;
+            this.label31.Location = new System.Drawing.Point(300, 1029);
+            this.label31.Name = "label31";
+            this.label31.Size = new System.Drawing.Size(101, 37);
+            this.label31.TabIndex = 65;
+            this.label31.Text = "气泵关";
+            // 
+            // label32
+            // 
+            this.label32.AutoSize = true;
+            this.label32.Font = new System.Drawing.Font("微软雅黑", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label32.ForeColor = System.Drawing.Color.Red;
+            this.label32.Location = new System.Drawing.Point(1114, 1029);
+            this.label32.Name = "label32";
+            this.label32.Size = new System.Drawing.Size(101, 37);
+            this.label32.TabIndex = 66;
+            this.label32.Text = "气泵关";
+            // 
+            // timer3
+            // 
+            this.timer3.Interval = 10000;
+            this.timer3.Tick += new System.EventHandler(this.timer3_Tick);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1971, 1019);
+            this.ClientSize = new System.Drawing.Size(1981, 1154);
+            this.Controls.Add(this.label32);
+            this.Controls.Add(this.label31);
+            this.Controls.Add(this.button6);
+            this.Controls.Add(this.button5);
+            this.Controls.Add(this.button4);
+            this.Controls.Add(this.button3);
+            this.Controls.Add(this.label30);
+            this.Controls.Add(this.label29);
+            this.Controls.Add(this.trackBar1);
             this.Controls.Add(this.textBox22);
+            this.Controls.Add(this.textBox23);
+            this.Controls.Add(this.label27);
+            this.Controls.Add(this.label28);
+            this.Controls.Add(this.label25);
+            this.Controls.Add(this.label26);
+            this.Controls.Add(this.trackBar4);
             this.Controls.Add(this.label24);
-            this.Controls.Add(this.comboBox2);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.label11);
             this.Controls.Add(this.comboBox1);
@@ -1073,6 +1260,8 @@
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.groupBox5.ResumeLayout(false);
             this.groupBox5.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar4)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1129,8 +1318,6 @@
         private System.Windows.Forms.TextBox textBox13;
         private System.Windows.Forms.Label label17;
         private System.Windows.Forms.TextBox textBox14;
-        private System.Windows.Forms.Label label24;
-        private System.Windows.Forms.ComboBox comboBox2;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.TextBox textBox21;
         private System.Windows.Forms.Label label18;
@@ -1145,13 +1332,29 @@
         private System.Windows.Forms.TextBox textBox18;
         private System.Windows.Forms.TextBox textBox19;
         private System.Windows.Forms.TextBox textBox20;
-        private System.Windows.Forms.TextBox textBox22;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.Timer timer2;
         private System.Windows.Forms.CheckBox checkBox9;
         private System.Windows.Forms.CheckBox checkBox12;
         private System.Windows.Forms.CheckBox checkBox11;
         private System.Windows.Forms.CheckBox checkBox10;
+        private System.Windows.Forms.Label label24;
+        private System.Windows.Forms.TrackBar trackBar4;
+        private System.Windows.Forms.Label label25;
+        private System.Windows.Forms.Label label26;
+        private System.Windows.Forms.Label label27;
+        private System.Windows.Forms.Label label28;
+        private System.Windows.Forms.TextBox textBox22;
+        private System.Windows.Forms.TextBox textBox23;
+        private System.Windows.Forms.TrackBar trackBar1;
+        private System.Windows.Forms.Label label29;
+        private System.Windows.Forms.Label label30;
+        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.Label label31;
+        private System.Windows.Forms.Label label32;
+        private System.Windows.Forms.Timer timer3;
     }
 }
 
