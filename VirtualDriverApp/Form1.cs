@@ -1,5 +1,4 @@
 ﻿using FluentModbus;
-using Microsoft.Win32;
 using Modbus;
 using NLog;
 using System;
@@ -53,13 +52,23 @@ namespace VirtualDriverApp
         private double PN2_FLOW_DIFF;
 
         private double S1_AP_Cur;
-        private double S1_H2;
+        private int S1_H2;
         private double S2_AP_Cur;
-        private double S2_H2;
+        private int S2_H2;
 
         private ushort[] DI_InputRegisters = new ushort[32];
 
         private static Random random = new Random();  // 随机数生成器
+
+        // 新增：用于串行化各 Modbus 客户端的访问，避免并发与潜在死锁
+        private readonly SemaphoreSlim _ai01Lock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _diLock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _doLock = new SemaphoreSlim(1, 1);
+
+        // 新增：防止 Timer 重入（定时器回调在 UI 线程，网络慢时容易叠加）
+        private volatile bool _timer2Busy = false;
+        private volatile bool _timer3Busy = false;
+
         public double CalculateCurrent(double frequency)
         {
             if (frequency < 0)
@@ -88,7 +97,7 @@ namespace VirtualDriverApp
             label10.ForeColor = Color.Black;
             label10.Text = "未启动";
             //textBox9.Clear();
-            pictureBox2.Visible = false;
+
 
 
             LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -104,6 +113,11 @@ namespace VirtualDriverApp
 
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
             textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
+
+            S1_H2 = trackBar4.Value;
+            S2_H2 = trackBar1.Value;
+            label33.Text = S1_H2.ToString() + "%";
+            label34.Text = S2_H2.ToString() + "%";
 
             // 获取所有可用的串口名称
             string[] portNames = SerialPort.GetPortNames();
@@ -154,45 +168,77 @@ namespace VirtualDriverApp
                 }
             }
         }
-        private void button1_Click(object sender, EventArgs e)
+
+        // 修改为异步，避免在 UI 线程同步阻塞 Connect 和 Sleep
+        private async void button1_Click(object sender, EventArgs e)
         {
+            button1.Enabled = false;
+            label10.ForeColor = Color.Black;
+            label10.Text = "正在连接...";
 
+            try
+            {
+                // ModbusTcpClient实例化
+                AI01_ModbusClient = new ModbusTcpClient();
+                AI02_ModbusClient = new ModbusTcpClient();
+                DO_ModbusClient = new ModbusTcpClient();
+                DI_ModbusClient = new ModbusTcpClient();
 
-            // ModbusTcpClient实例化
-            AI01_ModbusClient = new ModbusTcpClient();
-            AI02_ModbusClient = new ModbusTcpClient();
-            DO_ModbusClient = new ModbusTcpClient();
-            DI_ModbusClient = new ModbusTcpClient();
+                string selectedPort = comboBox1.SelectedItem?.ToString();
 
+                // 在后台线程执行所有可能阻塞的 I/O（网络连接、串口打开）
+                await Task.Run(() =>
+                {
+                    // 依次连接"192.168.1.133", "192.168.1.134" "192.168.1.131", "192.168.1.132" 
+                    AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);
+                    AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);
 
+                    DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
+                    DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
 
-            // 依次连接"192.168.1.133", "192.168.1.134" "192.168.1.131", "192.168.1.132" 
-            AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);
-            AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);
+                    // comboBox1为变频器端口选择窗
+                    // 设置串口配置（打开串口）
+                    ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
+                    
+                    if(true)
+                    { 
+                        // 稍作延时给串口/设备稳定（后台线程里，不阻塞 UI）
+                        Thread.Sleep(250);
+                        WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
+                        Thread.Sleep(250);
+                        WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
+                        Thread.Sleep(250);
+                        WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
+                        Thread.Sleep(250);
+                        WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
+                    }
 
-            DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
-            DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
+                    // 启动共享的 Modbus 线程
+                    ModbusRtuSlave.Start();
+                });
 
-            // comboBox1为变频器端口选择窗
-            string selectedPort = comboBox1.SelectedItem?.ToString();
-            // 设置串口配置
-            ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
-            Thread.Sleep(200);
-            // 启动共享的 Modbus 线程
-            ModbusRtuSlave.Start();
+                //pictureBox2.Visible = true;
 
-            pictureBox2.Visible = true;
+                button1.ForeColor = Color.Green;
+                label10.ForeColor = Color.Green;
+                label10.Text = "运行中";
 
-            button1.ForeColor = Color.Green;
-            label10.ForeColor = Color.Green;
-            label10.Text = "运行中";
-
-            // 启动定时器
-            timer1.Enabled = true;
-            Thread.Sleep(250);
-            timer2.Enabled = true;
-            Thread.Sleep(250);
-            timer3.Enabled = true;
+                // 直接启用定时器（不要再用 Thread.Sleep 阻塞 UI）
+                timer1.Enabled = true;
+                timer2.Enabled = true;
+                timer3.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                label10.ForeColor = Color.Red;
+                label10.Text = "连接失败";
+                LogHelper.Logger.Error(ex, "启动连接失败");
+                MessageBox.Show($"连接设备失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                button1.Enabled = true;
+            }
         }
 
         private int slave1_last_randomv = 0;
@@ -324,12 +370,12 @@ namespace VirtualDriverApp
             textBox1.Text = ((double)slave1.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox2.Text = ((double)slave1.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
             P1_Cur = (double)slave1.GetHoldingRegister(0x3004) / 100.0;
-            
+
             textBox4.Text = ((double)slave2.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox3.Text = ((double)slave2.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
             N1_Cur = (double)slave2.GetHoldingRegister(0x3004) / 100.0;
 
-            S1_AP_Cur = (P1_Cur+N1_Cur)*0.5 * 0.093;
+            S1_AP_Cur = (P1_Cur + N1_Cur) * 0.5 * 0.093;
 
             textBox8.Text = ((double)slave3.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox7.Text = ((double)slave3.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
@@ -341,15 +387,6 @@ namespace VirtualDriverApp
 
             S2_AP_Cur = (P2_Cur + N2_Cur) * 0.5 * 0.091;
 
-            //textBox22.Text = textBox22.Text + "P1 Current:" + textBox2.Text + "\r\n";
-            //textBox22.Text = textBox22.Text + "N1 Current:" + textBox3.Text + "\r\n";
-            //textBox22.Text = textBox22.Text + "P2 Current:" + textBox7.Text + "\r\n";
-            //textBox22.Text = textBox22.Text + "N2 Current:" + textBox5.Text + "\r\n";
-
-            //if (textBox22.Lines.Length > 40)
-            //{
-            //    textBox22.Clear();
-            //}
         }
         private void button2_Click(object sender, EventArgs e)
         {
@@ -366,146 +403,170 @@ namespace VirtualDriverApp
 
         }
 
-        // 在类中定义记录状态的变量
-        private int lastState_2 = -1;
-        private int lastState_3 = -1;
-
+        // 注意：该 Tick 由 UI 线程调用。将“所有网络 I/O”移到后台，并加防重入。
         private async void timer2_Tick(object sender, EventArgs e)
         {
-            double flow_max = 90.0; double flow_min = 0.0;
-            double press_max = 0.20; double press_min = 0.0;
-
-            double P1_PV_Show = ((P1_Cur / 15.0) * (press_max));
-            double N1_PV_Show = ((N1_Cur / 15.0) * (press_max)) + PN1_PRESS_DIFF;
-            double P2_PV_Show = ((P2_Cur / 15.0) * (press_max));
-            double N2_PV_Show = ((N2_Cur / 15.0) * (press_max)) + PN2_PRESS_DIFF;
-
-            double P1_FV_Show = ((P1_Cur / 15.0) * (flow_max));
-            double N1_FV_Show = ((N1_Cur / 15.0) * (flow_max)) + PN1_FLOW_DIFF;
-            double P2_FV_Show = ((P2_Cur / 15.0) * (flow_max));
-            double N2_FV_Show = ((N2_Cur / 15.0) * (flow_max)) + PN2_FLOW_DIFF;
-
-            textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
-            textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
-
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
-
-            textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-            textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
-
-            LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
-
-            textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
-            textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
-
-            LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
-
-            textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-            textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
-
-            LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
-            LogHelper.Logger.Info("---------------------------------------------");
-
-
-            double air_pump_sensor_max = 3.5;
-
-            double S1_CURV_Show = (S1_AP_Cur);
-            double S2_CURV_Show = (S2_AP_Cur);
-
-
-            textBox22.Text = S1_CURV_Show.ToString("F1") + "A";
-            textBox23.Text = S2_CURV_Show.ToString("F1") + "A";
-
-            double flow_sensor_max = 90.0;
-            double press_sensor_max = 0.20;
-
-            ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-            ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-            ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-            ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-
-            ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-            ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-            ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-            ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-
-            ushort S1_CUR_SET = (ushort)((S1_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-            ushort S2_CUR_SET = (ushort)((S2_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-
-            Console.WriteLine("S1 Cur Set:"+S1_CUR_SET.ToString()+ "S2 Cur Set:"+S2_CUR_SET);
-
-            // 获取原始字节数据，假设 ReadInputRegisters 返回 Span<byte>，用 ToArray 转换
-            byte[] diWordArray = DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32).ToArray();
-
-            for (int i = 0; i < 32; i++)
+            if (_timer2Busy) return;
+            _timer2Busy = true;
+            try
             {
-                DI_InputRegisters[i] = (ushort)((diWordArray[i * 2] << 8) | diWordArray[i * 2 + 1]);
-            }
+                double flow_max = 90.0; double flow_min = 0.0;
+                double press_max = 0.20; double press_min = 0.0;
 
-            if (DI_InputRegisters[1] == 1)
-            {
-                label24.Text = "PCS  设备连锁连接";
-                label24.ForeColor = Color.Lime;
-            }
-            else
-            {
-                label24.Text = "PCS  设备连锁断开";
-                label24.ForeColor = Color.Red;
-            }
+                double Cal_Base = 15.0; // 基准值
 
-            //await Task.Run(() =>
-            //{
-            //    // 主逻辑
-            //    //if (DI_InputRegisters[2] != lastState_2)
-            //    {
-            //        lastState_2 = DI_InputRegisters[2];
+                double P1_PV_Show = ((P1_Cur / Cal_Base) * (press_max));
+                double N1_PV_Show = ((N1_Cur / Cal_Base) * (press_max)) + PN1_PRESS_DIFF;
+                double P2_PV_Show = ((P2_Cur / Cal_Base) * (press_max));
+                double N2_PV_Show = ((N2_Cur / Cal_Base) * (press_max)) + PN2_PRESS_DIFF;
 
-            //        if (DI_InputRegisters[2] == 1)
-            //        {
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 5, 1);
-            //            System.Threading.Thread.Sleep(1000); // 延时 200 毫秒
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 6, 0);
-            //            System.Threading.Thread.Sleep(5000); // 延时 200 毫秒
-            //        }
-            //        else
-            //        {
+                double P1_FV_Show = ((P1_Cur / Cal_Base) * (flow_max));
+                double N1_FV_Show = ((N1_Cur / Cal_Base) * (flow_max)) + PN1_FLOW_DIFF;
+                double P2_FV_Show = ((P2_Cur / Cal_Base) * (flow_max));
+                double N2_FV_Show = ((N2_Cur / Cal_Base) * (flow_max)) + PN2_FLOW_DIFF;
 
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 5, 0);
-            //            System.Threading.Thread.Sleep(1000); // 延时 200 毫秒
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 6, 1);
-            //            System.Threading.Thread.Sleep(5000); // 延时 200 毫秒
-            //        }
-            //    }
-            //});
+                textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
+                textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
 
-            //await Task.Run(() =>
-            //{
-            //    //if (DI_InputRegisters[3] != lastState_3)
-            //    {
-            //        lastState_3 = DI_InputRegisters[3];
+                LogHelper.Logger.Info("---------------------------------------------");
+                LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
 
-            //        if (DI_InputRegisters[3] == 1)
-            //        {
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 7, 1);
-            //            System.Threading.Thread.Sleep(1000); // 延时 200 毫秒
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 8, 0);
-            //            System.Threading.Thread.Sleep(5000); // 延时 200 毫秒
-            //        }
-            //        else
-            //        {
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 7, 0);
-            //            System.Threading.Thread.Sleep(1000); // 延时 200 毫秒
-            //            WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 8, 1);
-            //            System.Threading.Thread.Sleep(5000); // 延时 200 毫秒
-            //        }
-            //    }
-            //});
+                textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+                textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
 
-            // 发送 Modbus 请求到一个新线程
-            //发送 Modbus 请求到一个新线程
-            await Task.Run(() =>
-            {
+                LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
+
+                textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
+                textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+
+                LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+
+                textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+                textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+
+                LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
+                LogHelper.Logger.Info("---------------------------------------------");
+
+
+                double air_pump_sensor_max = 3.5;
+
+
+
+                double flow_sensor_max = 90.0;
+                double press_sensor_max = 0.20;
+
+                ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+                ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+                ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+                ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
+
+                ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+                ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+                ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+                ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+
+                ushort S1_CUR_SET = 0;
+                ushort S2_CUR_SET = 0;
+
+
+                ushort S1_H2_SET = (ushort)(((double)(S1_H2) / 100.0) * 16000.0 + 4000.0);
+                ushort S2_H2_SET = (ushort)(((double)(S2_H2) / 100.0) * 16000.0 + 4000.0);
+
+                S1_H2_SET = (ushort)(S1_H2_SET + 120);
+                S2_H2_SET = (ushort)(S2_H2_SET + 120);
+
+                Console.WriteLine("S1 Cur Set:" + S1_CUR_SET.ToString() + "S2 Cur Set:" + S2_CUR_SET);
+
+                // 把 DI 读取放到后台线程，并串行化访问，避免在 UI 线程阻塞
+                byte[] diWordArray = null;
+                try
+                {
+                    diWordArray = await Task.Run(async () =>
+                    {
+                        await _diLock.WaitAsync();
+                        try
+                        {
+                            // 如果设备未连接，直接抛异常让上层捕获
+                            return DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32).ToArray();
+                        }
+                        finally
+                        {
+                            _diLock.Release();
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Logger.Error(ex, "读取 DI 输入寄存器失败");
+                }
+
+                if (diWordArray != null && diWordArray.Length >= 64)
+                {
+                    for (int i = 0; i < 32; i++)
+                    {
+                        DI_InputRegisters[i] = (ushort)((diWordArray[i * 2] << 8) | diWordArray[i * 2 + 1]);
+                    }
+                }
+
+                if (DI_InputRegisters[1] == 1)
+                {
+                    label24.Text = "PCS连锁连接";
+                    label24.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label24.Text = "PCS连锁断开";
+                    label24.ForeColor = Color.Red;
+                }
+
+
+                if (DI_InputRegisters[4] == 1)
+                {
+                    label31.Text = "气泵开";
+                    label31.ForeColor = Color.Lime;
+
+
+                    double S1_CURV_Show = 1.2; // 基线
+                    double s1Jitter = 0.1 + random.NextDouble() * 0.1; // 0.1~0.3
+                    S1_CURV_Show += (random.Next(0, 2) == 0 ? -1 : 1) * s1Jitter; // 正负随机波动
+                    S1_CURV_Show = Math.Max(0, Math.Min(3.5, S1_CURV_Show));
+
+                    //double S1_CURV_Show = (1.2);
+                    textBox22.Text = S1_CURV_Show.ToString("F1") + "A";
+                    S1_CUR_SET = (ushort)((S1_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
+                }
+                else
+                {
+                    label31.Text = "气泵关";
+                    label31.ForeColor = Color.Black;
+                    double S1_CURV_Show = (0);
+                    textBox22.Text = S1_CURV_Show.ToString("F1") + "A";
+                    S1_CUR_SET = (ushort)((S1_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
+                }
+
+                if (DI_InputRegisters[5] == 1)
+                {
+                    label32.Text = "气泵开";
+                    label32.ForeColor = Color.Lime;
+
+                    double S2_CURV_Show = 1.2; // 基线
+                    double s1Jitter = 0.1 + random.NextDouble() * 0.1; // 0.1~0.3
+                    S2_CURV_Show += (random.Next(0, 2) == 0 ? -1 : 1) * s1Jitter; // 正负随机波动
+                    S2_CURV_Show = Math.Max(0, Math.Min(3.5, S2_CURV_Show));
+
+                    textBox23.Text = S2_CURV_Show.ToString("F1") + "A";
+                    S2_CUR_SET = (ushort)((S2_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
+                }
+                else
+                {
+                    label32.Text = "气泵关";
+                    label32.ForeColor = Color.Black;
+                    double S2_CURV_Show = (0);
+                    textBox23.Text = S2_CURV_Show.ToString("F1") + "A";
+                    S2_CUR_SET = (ushort)((S2_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
+                }
+
+                // 发送 Modbus 请求到后台线程（只写操作放后台）
                 ushort startAddress = 10;
 
                 ushort[] values =
@@ -515,22 +576,33 @@ namespace VirtualDriverApp
 
                     P1_FV_SET,
                     N1_FV_SET,
-                    
+
                     P2_PV_SET,
                     N2_PV_SET,
-                    
+
                     P2_FV_SET,
                     N2_FV_SET,
-                    
+
                     S1_CUR_SET,
-                    2,
+                    S1_H2_SET,
                     S2_CUR_SET,
-                    3,
+                    S2_H2_SET,
                 };
 
                 try
                 {
-                    AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
+                    await Task.Run(async () =>
+                    {
+                        await _ai01Lock.WaitAsync();
+                        try
+                        {
+                            AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
+                        }
+                        finally
+                        {
+                            _ai01Lock.Release();
+                        }
+                    });
                 }
                 catch (FluentModbus.ModbusException ex)
                 {
@@ -542,7 +614,15 @@ namespace VirtualDriverApp
                     // 捕获其他异常
                     Console.WriteLine($"其他异常: {ex.Message}");
                 }
-            });
+            }
+            catch (Exception exOuter)
+            {
+                LogHelper.Logger.Error(exOuter, "timer2_Tick 执行异常");
+            }
+            finally
+            {
+                _timer2Busy = false;
+            }
         }
 
         // 封装发送 Modbus 请求的代码
@@ -683,11 +763,11 @@ namespace VirtualDriverApp
 
         private void button5_Click(object sender, EventArgs e)
         {
-            if(button5.Text == "制冷机故障 开启")
+            if (button5.Text == "制冷机故障 开启")
             {
                 button5.Text = "制冷机故障 停止";
                 WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 0, 1);
-                button5.BackColor = Color.Lime;
+                button5.BackColor = Color.Red;
             }
             else if (button5.Text == "制冷机故障 停止")
             {
@@ -697,130 +777,271 @@ namespace VirtualDriverApp
             }
         }
 
-        private void timer3_Tick(object sender, EventArgs e)
+        // 修改为异步，避免在 UI 线程内同步网络写阻塞
+        private async void timer3_Tick(object sender, EventArgs e)
         {
-            if (DI_InputRegisters[2] == 1  && DI_InputRegisters[3] == 1)
+            if (_timer3Busy) return;
+            _timer3Busy = true;
+            try
             {
-                ushort[] open_values =
+                if (DI_InputRegisters[2] == 1 && DI_InputRegisters[3] == 1)
                 {
-                    1,
-                    0,
-                    1,
-                    0
-                };
+                    ushort[] open_values =
+                    {
+                        1,
+                        0,
+                        1,
+                        0
+                    };
 
-                try
-                {
-                    DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
+                    try
+                    {
+                        await Task.Run(async () =>
+                        {
+                            await _doLock.WaitAsync();
+                            try
+                            {
+                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
+                            }
+                            finally
+                            {
+                                _doLock.Release();
+                            }
+                        });
+                    }
+                    catch (FluentModbus.ModbusException ex)
+                    {
+                        // 捕获 Modbus 异常
+                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 捕获其他异常
+                        Console.WriteLine($"其他异常: {ex.Message}");
+                    }
                 }
-                catch (FluentModbus.ModbusException ex)
+                else if (DI_InputRegisters[2] == 1 && DI_InputRegisters[3] == 0)
                 {
-                    // 捕获 Modbus 异常
-                    Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    ushort[] open_values =
+                    {
+                        1,
+                        0,
+                        0,
+                        1
+                    };
+
+                    try
+                    {
+                        await Task.Run(async () =>
+                        {
+                            await _doLock.WaitAsync();
+                            try
+                            {
+                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
+                            }
+                            finally
+                            {
+                                _doLock.Release();
+                            }
+                        });
+                    }
+                    catch (FluentModbus.ModbusException ex)
+                    {
+                        // 捕获 Modbus 异常
+                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 捕获其他异常
+                        Console.WriteLine($"其他异常: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
+                else if (DI_InputRegisters[2] == 0 && DI_InputRegisters[3] == 1)
                 {
-                    // 捕获其他异常
-                    Console.WriteLine($"其他异常: {ex.Message}");
+                    ushort[] open_values =
+                    {
+                        0,
+                        1,
+                        1,
+                        0
+                    };
+
+                    try
+                    {
+                        await Task.Run(async () =>
+                        {
+                            await _doLock.WaitAsync();
+                            try
+                            {
+                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
+                            }
+                            finally
+                            {
+                                _doLock.Release();
+                            }
+                        });
+                    }
+                    catch (FluentModbus.ModbusException ex)
+                    {
+                        // 捕获 Modbus 异常
+                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 捕获其他异常
+                        Console.WriteLine($"其他异常: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    ushort[] open_values =
+                    {
+                        0,
+                        1,
+                        0,
+                        1
+                    };
+
+                    try
+                    {
+                        await Task.Run(async () =>
+                        {
+                            await _doLock.WaitAsync();
+                            try
+                            {
+                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
+                            }
+                            finally
+                            {
+                                _doLock.Release();
+                            }
+                        });
+                    }
+                    catch (FluentModbus.ModbusException ex)
+                    {
+                        // 捕获 Modbus 异常
+                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 捕获其他异常
+                        Console.WriteLine($"其他异常: {ex.Message}");
+                    }
+                }
+
+
+                if (DI_InputRegisters[2] == 1)
+                {
+                    label29.Text = "子1负正混液开到位";
+                    label29.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label29.Text = "子1负正混液关到位";
+                    label29.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[3] == 1)
+                {
+                    label30.Text = "子2负正混液开到位";
+                    label30.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label30.Text = "子2负正混液关到位";
+                    label30.ForeColor = Color.Red;
                 }
             }
-            else if (DI_InputRegisters[2] == 1 && DI_InputRegisters[3] == 0)
+            catch (Exception exOuter)
             {
-                ushort[] open_values =
-                {
-                    1,
-                    0,
-                    0,
-                    1
-                };
-
-                try
-                {
-                    DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                }
-                catch (FluentModbus.ModbusException ex)
-                {
-                    // 捕获 Modbus 异常
-                    Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    // 捕获其他异常
-                    Console.WriteLine($"其他异常: {ex.Message}");
-                }
+                LogHelper.Logger.Error(exOuter, "timer3_Tick 执行异常");
             }
-            else if (DI_InputRegisters[2] == 0 && DI_InputRegisters[3] == 1)
+            finally
             {
-                ushort[] open_values =
-                {
-                    0,
-                    1,
-                    1,
-                    0
-                };
-
-                try
-                {
-                    DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                }
-                catch (FluentModbus.ModbusException ex)
-                {
-                    // 捕获 Modbus 异常
-                    Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    // 捕获其他异常
-                    Console.WriteLine($"其他异常: {ex.Message}");
-                }
-            }   
-            else
-            {
-                ushort[] open_values =
-                {
-                    0,
-                    1,
-                    0,
-                    1
-                };
-
-                try
-                {
-                    DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                }
-                catch (FluentModbus.ModbusException ex)
-                {
-                    // 捕获 Modbus 异常
-                    Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                }
-                catch (Exception ex)
-                {
-                    // 捕获其他异常
-                    Console.WriteLine($"其他异常: {ex.Message}");
-                }
+                _timer3Busy = false;
             }
+        }
 
+        private void trackBar4_Scroll(object sender, EventArgs e)
+        {
+            S1_H2 = trackBar4.Value;
+            label33.Text = S1_H2.ToString() + "%";
+        }
 
-            if (DI_InputRegisters[2] == 1)
-            {
-                label29.Text = "子1负正混液开到位";
-                label29.ForeColor = Color.Lime;
-            }
-            else
-            {
-                label29.Text = "子1负正混液关到位";
-                label29.ForeColor = Color.Red;
-            }
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+        }
 
-            if (DI_InputRegisters[3] == 1)
+        private void trackBar1_Scroll_1(object sender, EventArgs e)
+        {
+            S2_H2 = trackBar1.Value;
+            label34.Text = S2_H2.ToString() + "%";
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (button3.Text == "外部急停 开启")
             {
-                label30.Text = "子2负正混液开到位";
-                label30.ForeColor = Color.Lime;
+                button3.Text = "外部急停 关闭";
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 0);
+                button3.BackColor = Color.Red;
             }
-            else
+            else if (button3.Text == "外部急停 关闭")
             {
-                label30.Text = "子2负正混液关到位";
-                label30.ForeColor = Color.Red;
+                button3.Text = "外部急停 开启";
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
+                button3.BackColor = Color.White;
+            }
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            if (button6.Text == "水浸故障 开启")
+            {
+                button6.Text = "水浸故障 停止";
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 1, 1);
+                button6.BackColor = Color.Red;
+            }
+            else if (button6.Text == "水浸故障 停止")
+            {
+                button6.Text = "水浸故障 开启";
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 1, 0);
+                button6.BackColor = Color.White;
+            }
+        }
+
+        int MAIN_DOOR = 0;
+        int POWER_DOOR = 0;
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (MAIN_DOOR == 0)
+            {
+                MAIN_DOOR = 1;
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 1);
+                button4.BackColor = Color.Red;
+            }
+            else if (MAIN_DOOR == 1)
+            {
+                MAIN_DOOR = 0;
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 0);
+                button4.BackColor = Color.White;
+            }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            if (POWER_DOOR == 0)
+            {
+                POWER_DOOR = 1;
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 1);
+                button7.BackColor = Color.Red;
+            }
+            else if (POWER_DOOR == 1)
+            {
+                POWER_DOOR = 0;
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 0);
+                button7.BackColor = Color.White;
             }
         }
     }
@@ -919,27 +1140,6 @@ public class ModbusRtuSlave
     {
         float startFrequency = currentFrequency;
         float changeDuration = 1.0f;
-
-        //if (Math.Abs(targetFrequency - startFrequency) > 20 * 100)
-        //{
-        //    changeDuration = 3.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 10 * 100 && Math.Abs(targetFrequency - startFrequency) < 20 * 100)
-        //{
-        //    changeDuration = 2.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 5 * 100 && Math.Abs(targetFrequency - startFrequency) < 10 * 100)
-        //{
-        //    changeDuration = 1.5f;
-        //}
-        //else if (Math.Abs(targetFrequency - startFrequency) > 250 && Math.Abs(targetFrequency - startFrequency) < 500)
-        //{
-        //    changeDuration = 1.2f;
-        //}
-        //else
-        //{
-        //    changeDuration = 1.0f;
-        //}
 
         float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
 
