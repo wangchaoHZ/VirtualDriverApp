@@ -259,23 +259,34 @@ namespace VirtualDriverApp
                     if (checkBox1.Checked)
                     {
                         slave1.SetHoldingRegister(0x3004, 3000);
-                        slave1.SetHoldingRegister(0x2100, 4);
+                        //slave1.SetHoldingRegister(0x2100, 4);
                     }
                     else
                     {
                         slave1.SetHoldingRegister(0x3004, 30);
-                        slave1.SetHoldingRegister(0x2100, 4);
+                        //slave1.SetHoldingRegister(0x2100, 4);
                     }
                 }
                 else
                 {
                     slave1.SetHoldingRegister(0x3004, rv);
-                    slave1.SetHoldingRegister(0x2100, 1);
+                    //slave1.SetHoldingRegister(0x2100, 1);
                 }
             }
             else
             {
                 slave1.SetHoldingRegister(0x2100, 3);
+            }
+
+            if(checkBox13.Checked)
+            {
+                // 泵故障
+                slave1.SetHoldingRegister(0x2100, 4);
+            }
+            else
+            {
+                // 泵正常
+                slave1.SetHoldingRegister(0x2100, 1);
             }
 
             if (slave2.GetFinalCurrent() > 100)
@@ -295,17 +306,28 @@ namespace VirtualDriverApp
                     {
                         slave2.SetHoldingRegister(0x3004, 30);
                     }
-                    slave2.SetHoldingRegister(0x2100, 4);
+                    //slave2.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave2.SetHoldingRegister(0x3004, rv);
-                    slave2.SetHoldingRegister(0x2100, 1);
+                    //slave2.SetHoldingRegister(0x2100, 1);
                 }
             }
             else
             {
-                slave2.SetHoldingRegister(0x2100, 3);
+                //slave2.SetHoldingRegister(0x2100, 3);
+            }
+
+            if (checkBox14.Checked)
+            {
+                // 泵故障
+                slave2.SetHoldingRegister(0x2100, 4);
+            }
+            else
+            {
+                // 泵正常
+                slave2.SetHoldingRegister(0x2100, 1);
             }
 
             if (slave3.GetFinalCurrent() > 100)
@@ -324,17 +346,28 @@ namespace VirtualDriverApp
                     {
                         slave3.SetHoldingRegister(0x3004, 30);
                     }
-                    slave3.SetHoldingRegister(0x2100, 4);
+                    //slave3.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave3.SetHoldingRegister(0x3004, rv);
-                    slave3.SetHoldingRegister(0x2100, 1);
+                    //slave3.SetHoldingRegister(0x2100, 1);
                 }
             }
             else
             {
-                slave3.SetHoldingRegister(0x2100, 3);
+                //slave3.SetHoldingRegister(0x2100, 3);
+            }
+
+            if (checkBox15.Checked)
+            {
+                // 泵故障
+                slave3.SetHoldingRegister(0x2100, 4);
+            }
+            else
+            {
+                // 泵正常
+                slave3.SetHoldingRegister(0x2100, 1);
             }
 
             if (slave4.GetFinalCurrent() > 100)
@@ -354,17 +387,28 @@ namespace VirtualDriverApp
                     {
                         slave4.SetHoldingRegister(0x3004, 30);
                     }
-                    slave4.SetHoldingRegister(0x2100, 4);
+                    //slave4.SetHoldingRegister(0x2100, 4);
                 }
                 else
                 {
                     slave4.SetHoldingRegister(0x3004, rv);
-                    slave4.SetHoldingRegister(0x2100, 1);
+                    //slave4.SetHoldingRegister(0x2100, 1);
                 }
             }
             else
             {
-                slave4.SetHoldingRegister(0x2100, 3);
+                //slave4.SetHoldingRegister(0x2100, 3);
+            }
+
+            if (checkBox16.Checked)
+            {
+                // 泵故障
+                slave4.SetHoldingRegister(0x2100, 4);
+            }
+            else
+            {
+                // 泵正常
+                slave4.SetHoldingRegister(0x2100, 1);
             }
 
             textBox1.Text = ((double)slave1.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
@@ -1034,13 +1078,13 @@ namespace VirtualDriverApp
             if (POWER_DOOR == 0)
             {
                 POWER_DOOR = 1;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 1);
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 3, 1);
                 button7.BackColor = Color.Red;
             }
             else if (POWER_DOOR == 1)
             {
                 POWER_DOOR = 0;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 0);
+                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 3, 0);
                 button7.BackColor = Color.White;
             }
         }
