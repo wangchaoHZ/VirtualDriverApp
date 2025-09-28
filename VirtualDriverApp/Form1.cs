@@ -11,7 +11,6 @@ using FluentModbus;
 using Modbus;
 using Newtonsoft.Json;
 using NLog;
-using System.Speech.Synthesis;
 using System.Net.NetworkInformation;
 
 
@@ -209,21 +208,7 @@ namespace VirtualDriverApp
 
         public void EstackAndOcvVoltUpdateShow()
         {
-            if (checkBox10.Checked)
-            {
-                for (int i = 0; i < A_ES_VOLT.Length; i++)
-                {
-                    A_ES_VOLT[i] = 99.5;
-                }
-            }
-            else if (checkBox9.Checked)
-            {
-                for (int i = 0; i < A_ES_VOLT.Length; i++)
-                {
-                    A_ES_VOLT[i] = 0.5;
-                }
-            }
-            else
+            if(true)
             {
                 for (int i = 0; i < A_ES_VOLT.Length; i++)
                 {
@@ -231,21 +216,7 @@ namespace VirtualDriverApp
                 }
             }
 
-            if (checkBox12.Checked)
-            {
-                for (int i = 0; i < B_ES_VOLT.Length; i++)
-                {
-                    B_ES_VOLT[i] = 99.5;
-                }
-            }
-            else if (checkBox11.Checked)
-            {
-                for (int i = 0; i < B_ES_VOLT.Length; i++)
-                {
-                    B_ES_VOLT[i] = 0.5;
-                }
-            }
-            else
+            if (true)
             {
                 for (int i = 0; i < A_ES_VOLT.Length; i++)
                 {
@@ -476,61 +447,6 @@ namespace VirtualDriverApp
             VFD_COM_PORT = config.VFBDevice.PortName;
             VBT_COM_PORT = config.VoltDevice.PortName;
 
-            string[] modbusIps = { "192.168.1.133", "192.168.1.134", "192.168.1.131", "192.168.1.132" };
-            string[] ipDesc = { "AI01模块", "AI02模块", "DO模块", "DI模块" };
-
-            // 检查各IP是否可达
-            for (int i = 0; i < modbusIps.Length; i++)
-            {
-                Ping pingSender = new Ping();
-                try
-                {
-                    PingReply reply = pingSender.Send(modbusIps[i], 800);
-                    if (reply.Status != IPStatus.Success)
-                    {
-                        string msg = string.Format("{0} IP({1}) 不可达，请检查网络！", ipDesc[i], modbusIps[i]);
-                        LogHelper.Logger.Error(msg);
-                        MessageBox.Show(msg, "网络错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        //return; // 如需强制终止，取消注释
-                    }
-                }
-                catch (Exception ex)
-                {
-                    string msg = string.Format("{0} IP({1}) 检测异常: {2}", ipDesc[i], modbusIps[i], ex.Message);
-                    LogHelper.Logger.Error(msg);
-                    MessageBox.Show(msg, "网络异常", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    //return;
-                }
-            }
-
-            LogHelper.Logger.Info("变频器通讯端口:" + VFD_COM_PORT + " 电压板通讯端口:" + VBT_COM_PORT);
-
-            // ModbusTcpClient实例化
-            AI01_ModbusClient = new ModbusTcpClient();
-            AI02_ModbusClient = new ModbusTcpClient();
-            DO_ModbusClient = new ModbusTcpClient();
-            DI_ModbusClient = new ModbusTcpClient();
-
-            // 依次连接
-            AI01_ModbusClient.Connect(modbusIps[0], ModbusEndianness.BigEndian);
-            AI02_ModbusClient.Connect(modbusIps[1], ModbusEndianness.BigEndian);
-            DO_ModbusClient.Connect(modbusIps[2], ModbusEndianness.BigEndian);
-            DI_ModbusClient.Connect(modbusIps[3], ModbusEndianness.BigEndian);
-
-            ushort[] values_buff =
-            {
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1,
-                    1
-            };
-
-            DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
-
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             PN1_PRESS_DIFF = 0.0;
@@ -553,11 +469,6 @@ namespace VirtualDriverApp
             slave2.SetHoldingRegister(0, 0);  // - 设置从站22的寄存器0初始值
             slave3.SetHoldingRegister(0, 0);  // - 设置从站33的寄存器0初始值
             slave4.SetHoldingRegister(0, 0);  // - 设置从站44的寄存器0初始值
-
-            // 
-            timer2.Start();
-            // 
-            timer3.Start();
         }
 
         private int slave1_last_randomv = 0;
@@ -1032,104 +943,15 @@ namespace VirtualDriverApp
                 hslMoveText1.ForeColor = Color.Red;
             }
 
-            // 制冷机开关状态
-            if (DI_InputRegisters[15] == 1)
-            {
-                panel6.BackColor = Color.Lime;
-                //synth.Speak("制冷机开");
-            }
-            else
-            {
-                panel6.BackColor = Color.Tomato;
-                //synth.Speak("制冷机关");
-            }
-
-            if (DI_InputRegisters[16] == 1)
-            {
-                panel2.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel2.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[17] == 1)
-            {
-                panel7.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel7.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[18] == 1)
-            {
-                panel4.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel4.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[19] == 1)
-            {
-                panel11.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel11.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[20] == 1)
-            {
-                panel9.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel9.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[23] == 1)
-            {
-                panel13.BackColor = Color.Lime;
-            }
-            else
-            {
-                panel13.BackColor = Color.Tomato;
-            }
-
-            if (DI_InputRegisters[24] == 1)
-            {
-                //panel12.BackColor = Color.Lime;
-            }
-            else
-            {
-                //panel12.BackColor = Color.Tomato;
-            }
+           
         }
 
         private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
         {
-            if (checkBox9.Checked)
-            {
-                checkBox10.Enabled = false;
-            }
-            else
-            {
-                checkBox10.Enabled = true;
-            }
         }
 
         private void checkBox10_CheckedChanged_1(object sender, EventArgs e)
         {
-            if (checkBox10.Checked)
-            {
-                checkBox9.Enabled = false;
-            }
-            else
-            {
-                checkBox9.Enabled = true;
-            }
         }
 
         private void hslLabel1_Click(object sender, EventArgs e)
@@ -1163,41 +985,60 @@ namespace VirtualDriverApp
 
         private void hslButton8_Click(object sender, EventArgs e)
         {
-
             if (hslButton8.Text == "启动模拟器")
             {
-                //string selectedPort = "COM3";
                 // 设置串口配置
                 ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
                 Thread.Sleep(200);
                 // 启动共享的 Modbus 线程
                 ModbusRtuSlave.Start();
 
-                //string VBTPort = "COM5";
                 // 设置串口配置
                 ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-                Thread.Sleep(100);
+                Thread.Sleep(200);
                 // 启动共享的 Modbus 线程
                 ModbusRtuSlaveVBT.Start();
 
-                Thread.Sleep(300);
-                timer1.Enabled = true;
-                timer2.Enabled = true;
+                Thread.Sleep(100);
+
+                // ModbusTcpClient实例化
+                AI01_ModbusClient = new ModbusTcpClient();
+                AI02_ModbusClient = new ModbusTcpClient();
+                DO_ModbusClient = new ModbusTcpClient();
+                DI_ModbusClient = new ModbusTcpClient();
+
+                // 依次连接
+                AI01_ModbusClient.Connect(modbusIps[0], ModbusEndianness.BigEndian);
+                AI02_ModbusClient.Connect(modbusIps[1], ModbusEndianness.BigEndian);
+                DO_ModbusClient.Connect(modbusIps[2], ModbusEndianness.BigEndian);
+                DI_ModbusClient.Connect(modbusIps[3], ModbusEndianness.BigEndian);
+
+                ushort[] values_buff =
+                {
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+            };
+
+                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
+
+
 
                 hslButton8.OriginalColor = Color.Lime;
-
                 hslButton8.Text = "关闭模拟器";
             }
             else if (hslButton8.Text == "关闭模拟器")
             {
                 Application.Exit();
+                Console.WriteLine("应用程序已退出。");
             }
         }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
         public class SerialDeviceConfig
         {
             public string PortName { get; set; }
@@ -1221,11 +1062,6 @@ namespace VirtualDriverApp
             public NetworkDeviceConfig AIModule2 { get; set; }
             public NetworkDeviceConfig DIModule { get; set; }
             public NetworkDeviceConfig DOModule { get; set; }
-        }
-
-        private void groupBox9_Enter(object sender, EventArgs e)
-        {
-
         }
 
         private void hslButton2_Click(object sender, EventArgs e)
@@ -1347,26 +1183,10 @@ namespace VirtualDriverApp
 
         private void checkBox12_CheckedChanged_1(object sender, EventArgs e)
         {
-            if (checkBox12.Checked)
-            {
-                checkBox11.Enabled = false;
-            }
-            else
-            {
-                checkBox11.Enabled = true;
-            }
         }
 
         private void checkBox11_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBox11.Checked)
-            {
-                checkBox12.Enabled = false;
-            }
-            else
-            {
-                checkBox12.Enabled = true;
-            }
         }
 
 
@@ -1579,6 +1399,11 @@ namespace VirtualDriverApp
         }
 
         private void label11_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void contextMenuStrip1_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
 
         }
