@@ -11,27 +11,26 @@ using FluentModbus;
 using Modbus;
 using Newtonsoft.Json;
 using NLog;
-using System.Net.NetworkInformation;
-
 
 namespace VirtualDriverApp
 {
     public partial class Form1 : Form
     {
-
         private ModbusTcpClient AI01_ModbusClient;
-        private byte AI01_ModbusClient_ID = 5;
-
         private ModbusTcpClient AI02_ModbusClient;
-        private byte AI02_ModbusClient_ID = 6;
-
-        private ModbusTcpClient DO_ModbusClient;
-        private byte DO_ModbusClient_ID = 2;
-
+        private ModbusTcpClient DO01_ModbusClient;
+        private ModbusTcpClient DO02_ModbusClient;
         private ModbusTcpClient DI_ModbusClient;
-        private byte DI_ModbusClient_ID = 3;
 
-        //SpeechSynthesizer synth = new SpeechSynthesizer();
+        private string AI01_ModuleIP = string.Empty;
+        private string AI02_ModuleIP = string.Empty;
+        private string DO01_ModuleIP = string.Empty;
+        private string DO02_ModuleIP = string.Empty;
+        private string DI_ModuleIP = string.Empty;
+
+        private string VFD_COM_PORT = string.Empty;
+        private string VBT_COM_PORT = string.Empty;
+
         public Form1()
         {
             InitializeComponent();
@@ -51,53 +50,59 @@ namespace VirtualDriverApp
             }
         }
 
-        // 创建四个从站实例，分别为地址11、22、33、44
-        ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
-        ModbusRtuSlave slave2 = new ModbusRtuSlave(22);
-        ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
-        ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
+        //创建四个变频器从站实例，分别为地址11、22、33、44
+        private readonly ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
+        private readonly ModbusRtuSlave slave2 = new ModbusRtuSlave(22);
+        private readonly ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
+        private readonly ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
+        //创建两个电压板从站实例，分别为地址1、2
+        private readonly ModbusRtuSlaveVBT Volt_A_Slave = new ModbusRtuSlaveVBT(1);
+        private readonly ModbusRtuSlaveVBT Volt_B_Slave = new ModbusRtuSlaveVBT(2);
 
-        ModbusRtuSlaveVBT Volt_A_Slave = new ModbusRtuSlaveVBT(1);
-        ModbusRtuSlaveVBT Volt_B_Slave = new ModbusRtuSlaveVBT(2);
+        // AI
+        private readonly ushort[] DI_RESULT = new ushort[32];
 
-
+        // 泵运行电流
         private double P1_Cur;
         private double N1_Cur;
         private double P2_Cur;
         private double N2_Cur;
 
-        private ushort[] DI_InputRegisters = new ushort[32];
-
+        // 压力 & 流量
         private double PN1_PRESS_DIFF;
         private double PN2_PRESS_DIFF;
         private double PN1_FLOW_DIFF;
         private double PN2_FLOW_DIFF;
 
+        // AB侧电堆电压基准
         private double A_ES_VOLT_BASE = 12.12;
         private double B_ES_VOLT_BASE = 12.15;
-
+        // AB侧OCV电压基准
         private double A_OCV_VOLT_BASE = 1.2583;
         private double B_OCV_VOLT_BASE = 1.2587;
 
-        private double[] A_ES_VOLT = new double[6];
+        // AB侧电堆电压 & OCV
+        private readonly double[] A_ES_VOLT = new double[6];
         private double A_OCV;
-        private double[] B_ES_VOLT = new double[6];
+        private readonly double[] B_ES_VOLT = new double[6];
         private double B_OCV;
 
+        // 电流转换后的电压值
         private ushort A_CURRENT_VOLT;
         private ushort B_CURRENT_VOLT;
 
+        // 总电压 & 总功率
         private float Total_Volt = 0;
         private float Total_Power = 0;
 
+        // PCS工作模式
         //0:空转 1:充电 2:放电 
-        private ushort PCS_DIRECT = 0;
+        private ushort PCS_WORK_MODE = 0;
 
         private int ConvertToCurrentVolt(float aCurrent)
         {
             double scaleFactor = 4000.0 / 1000.0;
             double result = aCurrent * scaleFactor;
-
             return (int)result;
         }
 
@@ -107,7 +112,6 @@ namespace VirtualDriverApp
 
             for (int i = 0; i < A_ES_VOLT.Length; i++)
             {
-                //A_ES_VOLT[i] = 99.5;
                 Console.WriteLine((ushort)(A_ES_VOLT[i] * 10));
             }
 
@@ -144,89 +148,40 @@ namespace VirtualDriverApp
             Total_Volt = (float)(A_Max_Total_V + B_Max_Total_V);
         }
 
-
         private ushort GenerateRandomNumber()
         {
-            // 生成一个范围在 0 到 10 之间的随机数
             int randomNumber = random.Next(0, 5);
-
-            // 通过生成的数值来表示范围 -5 到 5
-            // 如果 randomNumber 小于 5，则为负数，否则为正数
-            int finalNumber = randomNumber;  // -5 到 5 之间的值
-
-            // 如果你需要返回的是 ushort 数字，建议用 Math.Abs 取绝对值（即转换为正数）
-            return (ushort)Math.Abs(finalNumber);  // 返回正数
+            int finalNumber = randomNumber;  
+            return (ushort)Math.Abs(finalNumber); 
         }
 
         private ushort GenerateRandomNumber03()
         {
-            // 生成一个范围在 0 到 10 之间的随机数
             int randomNumber = random.Next(0, 2);
-
-            // 通过生成的数值来表示范围 -5 到 5
-            // 如果 randomNumber 小于 5，则为负数，否则为正数
-            int finalNumber = randomNumber - 1;  // -5 到 5 之间的值
-
-            // 如果你需要返回的是 ushort 数字，建议用 Math.Abs 取绝对值（即转换为正数）
-            return (ushort)Math.Abs(finalNumber);  // 返回正数
+            int finalNumber = randomNumber - 1;  
+            return (ushort)Math.Abs(finalNumber); 
         }
 
         private float RandomFloatGenerator()
         {
             Random rand = new Random();
-            float value = (float)(rand.NextDouble() * 0.345f); // 转为 float 类型
+            float value = (float)(rand.NextDouble() * 0.345f); 
             return value;
         }
 
         public void EstackAndOcvVoltInit()
         {
+            // 电池电堆初始电压 
             for (int i = 0; i < A_ES_VOLT.Length; i++)
             {
                 A_ES_VOLT[i] = A_ES_VOLT_BASE + GenerateRandomNumber03() + RandomFloatGenerator();
                 B_ES_VOLT[i] = B_ES_VOLT_BASE + GenerateRandomNumber03() + RandomFloatGenerator();
             }
+            // OCV初始电压
+            A_OCV = A_OCV_VOLT_BASE;
+            B_OCV = B_OCV_VOLT_BASE;
 
-            A_OCV = 1.2583;
-            B_OCV = 1.2587;
-
-            textBox24.Text = A_ES_VOLT[0].ToString("F2");
-            textBox25.Text = A_ES_VOLT[1].ToString("F2");
-            textBox27.Text = A_ES_VOLT[2].ToString("F2");
-            textBox15.Text = A_ES_VOLT[3].ToString("F2");
-            textBox23.Text = A_ES_VOLT[4].ToString("F2");
-            textBox26.Text = A_ES_VOLT[5].ToString("F2");
-            textBox34.Text = A_OCV.ToString("F4");
-
-            textBox35.Text = B_ES_VOLT[0].ToString("F2");
-            textBox33.Text = B_ES_VOLT[1].ToString("F2");
-            textBox31.Text = B_ES_VOLT[2].ToString("F2");
-            textBox32.Text = B_ES_VOLT[3].ToString("F2");
-            textBox30.Text = B_ES_VOLT[4].ToString("F2");
-            textBox29.Text = B_ES_VOLT[5].ToString("F2");
-            textBox28.Text = B_OCV.ToString("F4");
-        }
-
-        public void EstackAndOcvVoltUpdateShow()
-        {
-            if(true)
-            {
-                for (int i = 0; i < A_ES_VOLT.Length; i++)
-                {
-                    A_ES_VOLT[i] = A_ES_VOLT_BASE + RandomFloatGenerator();
-                }
-            }
-
-            if (true)
-            {
-                for (int i = 0; i < A_ES_VOLT.Length; i++)
-                {
-                    B_ES_VOLT[i] = B_ES_VOLT_BASE + +RandomFloatGenerator();
-                }
-            }
-
-            A_OCV = A_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
-            B_OCV = B_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
-
+            // 界面显示
             textBox24.Text = A_ES_VOLT[0].ToString("F1");
             textBox25.Text = A_ES_VOLT[1].ToString("F1");
             textBox27.Text = A_ES_VOLT[2].ToString("F1");
@@ -234,7 +189,44 @@ namespace VirtualDriverApp
             textBox23.Text = A_ES_VOLT[4].ToString("F1");
             textBox26.Text = A_ES_VOLT[5].ToString("F1");
             textBox34.Text = A_OCV.ToString("F4");
+            // 界面显示
+            textBox35.Text = B_ES_VOLT[0].ToString("F1");
+            textBox33.Text = B_ES_VOLT[1].ToString("F1");
+            textBox31.Text = B_ES_VOLT[2].ToString("F1");
+            textBox32.Text = B_ES_VOLT[3].ToString("F1");
+            textBox30.Text = B_ES_VOLT[4].ToString("F1");
+            textBox29.Text = B_ES_VOLT[5].ToString("F1");
+            textBox28.Text = B_OCV.ToString("F4");
+        }
 
+        public void EstackAndOcvVoltUpdateShow()
+        {
+            // 电池电堆初始电压
+            if (true)
+            {
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    A_ES_VOLT[i] = A_ES_VOLT_BASE + RandomFloatGenerator();
+                }
+
+                for (int i = 0; i < A_ES_VOLT.Length; i++)
+                {
+                    B_ES_VOLT[i] = B_ES_VOLT_BASE + +RandomFloatGenerator();
+                }
+            }
+            // OCV初始电压
+            A_OCV = A_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
+            B_OCV = B_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
+
+            // 界面显示
+            textBox24.Text = A_ES_VOLT[0].ToString("F1");
+            textBox25.Text = A_ES_VOLT[1].ToString("F1");
+            textBox27.Text = A_ES_VOLT[2].ToString("F1");
+            textBox15.Text = A_ES_VOLT[3].ToString("F1");
+            textBox23.Text = A_ES_VOLT[4].ToString("F1");
+            textBox26.Text = A_ES_VOLT[5].ToString("F1");
+            textBox34.Text = A_OCV.ToString("F4");
+            // 界面显示
             textBox35.Text = B_ES_VOLT[0].ToString("F1");
             textBox33.Text = B_ES_VOLT[1].ToString("F1");
             textBox31.Text = B_ES_VOLT[2].ToString("F1");
@@ -246,7 +238,6 @@ namespace VirtualDriverApp
 
         private float Branch_Cur1;
         private float Branch_Cur2;
-
         private float Branch_Cur1_BASE = 2.5F;
         private float Branch_Cur2_BASE = 3.1F;
 
@@ -277,7 +268,7 @@ namespace VirtualDriverApp
             float Branch_Cur1_Show;
             float Branch_Cur2_Show;
 
-            if (PCS_DIRECT < 2)
+            if (PCS_WORK_MODE < 2)
             {
                 Branch_Cur1_Show = Branch_Cur1;
                 Branch_Cur2_Show = Branch_Cur2;
@@ -297,19 +288,21 @@ namespace VirtualDriverApp
             uiDigitalLabel2.Value = hslGauge1.Value + hslGauge2.Value;
         }
 
+        // 电解液温度基值
+        private int P1_ELECTP_TEMP_BASE = 191;
+        private int N1_ELECTP_TEMP_BASE = 192;
+        private int P2_ELECTP_TEMP_BASE = 192;
+        private int N2_ELECTP_TEMP_BASE = 193;
 
-        private int P1_ELECTP_TEMP_BASE = 183;
-        private int N1_ELECTP_TEMP_BASE = 183;
-        private int P2_ELECTP_TEMP_BASE = 183;
-        private int N2_ELECTP_TEMP_BASE = 183;
+        // 电解液储液罐温度基值
+        private int P1_CYG_TEMP_BASE = 183;
+        private int N1_CYG_TEMP_BASE = 183;
+        private int P2_CYG_TEMP_BASE = 183;
+        private int N2_CYG_TEMP_BASE = 183;
 
-        private int P1_CYG_TEMP_BASE = 220;
-        private int N1_CYG_TEMP_BASE = 220;
-        private int P2_CYG_TEMP_BASE = 220;
-        private int N2_CYG_TEMP_BASE = 220;
-
-        public void TemperatureInit()
+        public void AllTempInit()
         {
+            // 电解液温度基值
             trackBar8.Value = P1_ELECTP_TEMP_BASE;
             //
             trackBar7.Value = N1_ELECTP_TEMP_BASE;
@@ -326,19 +319,19 @@ namespace VirtualDriverApp
             //
             trackBar9.Value = N2_CYG_TEMP_BASE;
 
+            // 界面显示
             textBox38.Text = (trackBar8.Value / 10.0).ToString("F1");
             textBox39.Text = (trackBar7.Value / 10.0).ToString("F1");
             textBox41.Text = (trackBar12.Value / 10.0).ToString("F1");
             textBox42.Text = (trackBar11.Value / 10.0).ToString("F1");
-
+            // 界面显示
             textBox36.Text = (trackBar5.Value / 10.0).ToString("F1");
             textBox22.Text = (trackBar10.Value / 10.0).ToString("F1");
             textBox37.Text = (trackBar6.Value / 10.0).ToString("F1");
             textBox40.Text = (trackBar9.Value / 10.0).ToString("F1");
         }
 
-
-        public void TemperatureUpdateShow()
+        public void AllTempUpdateShow()
         {
             trackBar8.Value = P1_ELECTP_TEMP_BASE + (int)((GenerateRandomNumber() * 0.256));
             //
@@ -366,8 +359,8 @@ namespace VirtualDriverApp
             textBox37.Text = (trackBar6.Value / 10.0).ToString("F1");
             textBox40.Text = (trackBar9.Value / 10.0).ToString("F1");
         }
-
-        private static Random random = new Random();  // 随机数生成器
+        // 随机数生成器
+        private readonly Random random = new Random();  
         public double CalculateCurrent(double frequency)
         {
             if (frequency < 0)
@@ -390,9 +383,6 @@ namespace VirtualDriverApp
             // 保留一位小数
             return Math.Round(current, 1);
         }
-
-        string VFD_COM_PORT = string.Empty;
-        string VBT_COM_PORT = string.Empty;
 
         static double CalculateSocValue(double ocv)
         {
@@ -426,6 +416,8 @@ namespace VirtualDriverApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
             // W:1940
             // H:1080
             //this.FormBorderStyle = FormBorderStyle.None;
@@ -443,26 +435,30 @@ namespace VirtualDriverApp
                 return;
             }
 
-            // 提取串口与IP
+            // 提取串口
             VFD_COM_PORT = config.VFBDevice.PortName;
             VBT_COM_PORT = config.VoltDevice.PortName;
+            // IP配置提取
+            AI01_ModuleIP = config.AIModule1.IPAddress;
+            AI02_ModuleIP = config.AIModule1.IPAddress;
+            DO01_ModuleIP = config.DOModule1.IPAddress;
+            DO02_ModuleIP = config.DOModule2.IPAddress;
+            DI_ModuleIP = config.DIModule.IPAddress;
 
-            hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
+            // 压力流量差值初始化
             PN1_PRESS_DIFF = 0.0;
             PN2_PRESS_DIFF = 0.0;
-
             PN1_FLOW_DIFF  = 0.0;
             PN2_FLOW_DIFF  = 0.0;
-
             textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
             textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
             textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
+            // 参数初始化
             EstackAndOcvVoltInit();
             Branch_Cur_Init();
-            TemperatureInit();
+            AllTempInit();
 
             // 为每个从站设置保持寄存器的初始值
             slave1.SetHoldingRegister(0, 0);  // - 设置从站11的寄存器0初始值
@@ -729,7 +725,7 @@ namespace VirtualDriverApp
                     P2_DJY_TEMP
                 };
 
-                AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
+                AI01_ModbusClient.WriteMultipleRegisters(AI01_SLAVE_ID, startAddress, values);
 
                 ushort[] values_buff =
                 {
@@ -747,7 +743,7 @@ namespace VirtualDriverApp
                     0,
                 };
 
-                AI02_ModbusClient.WriteMultipleRegisters(AI02_ModbusClient_ID, startAddress, values_buff);
+                AI02_ModbusClient.WriteMultipleRegisters(AI02_SLAVE_ID, startAddress, values_buff);
             });
         }
 
@@ -884,7 +880,7 @@ namespace VirtualDriverApp
 
         private void hslButton1_Click(object sender, EventArgs e)
         {
-            PCS_DIRECT = 1;
+            PCS_WORK_MODE = 1;
             hslTitle1.TextRight = "充电运行中";
             hslTitle1.RightTextColor = Color.Lime;
             Branch_Cur1_BASE = (float)372.7;
@@ -914,7 +910,7 @@ namespace VirtualDriverApp
 
             Branch_Cur_UpdateShow();
 
-            TemperatureUpdateShow();
+            AllTempUpdateShow();
 
             EstackAndOcvVoltUpdateShow();
 
@@ -924,15 +920,15 @@ namespace VirtualDriverApp
 
             for (int i = 0; i < 32; i++)
             {
-                DI_InputRegisters[i] = (ushort)((diWordSpan[i * 2] << 8) | diWordSpan[i * 2 + 1]);
+                DI_RESULT[i] = (ushort)((diWordSpan[i * 2] << 8) | diWordSpan[i * 2 + 1]);
             }
 
-            string result = string.Join(", ", DI_InputRegisters);
+            string result = string.Join(", ", DI_RESULT);
             Console.WriteLine("Input Registers: " + result);
 
             LogHelper.Logger.Info("DI模块采集:" + result);
 
-            if (DI_InputRegisters[1] == 1)
+            if (DI_RESULT[1] == 1)
             {
                 hslMoveText1.Text = "PCS连锁已建立";
                 hslMoveText1.ForeColor = Color.Lime;
@@ -989,29 +985,36 @@ namespace VirtualDriverApp
             {
                 // 设置串口配置
                 ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-                Thread.Sleep(200);
+                Thread.Sleep(20);
                 // 启动共享的 Modbus 线程
                 ModbusRtuSlave.Start();
+                Thread.Sleep(50);
 
                 // 设置串口配置
                 ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-                Thread.Sleep(200);
+                Thread.Sleep(20);
                 // 启动共享的 Modbus 线程
                 ModbusRtuSlaveVBT.Start();
-
-                Thread.Sleep(100);
+                Thread.Sleep(50);
 
                 // ModbusTcpClient实例化
                 AI01_ModbusClient = new ModbusTcpClient();
                 AI02_ModbusClient = new ModbusTcpClient();
-                DO_ModbusClient = new ModbusTcpClient();
+                DO01_ModbusClient = new ModbusTcpClient();
+                DO02_ModbusClient = new ModbusTcpClient();
                 DI_ModbusClient = new ModbusTcpClient();
 
                 // 依次连接
-                AI01_ModbusClient.Connect(modbusIps[0], ModbusEndianness.BigEndian);
-                AI02_ModbusClient.Connect(modbusIps[1], ModbusEndianness.BigEndian);
-                DO_ModbusClient.Connect(modbusIps[2], ModbusEndianness.BigEndian);
-                DI_ModbusClient.Connect(modbusIps[3], ModbusEndianness.BigEndian);
+                AI01_ModbusClient.Connect(AI01_ModuleIP, ModbusEndianness.BigEndian);
+                Thread.Sleep(50);
+                AI02_ModbusClient.Connect(AI02_ModuleIP, ModbusEndianness.BigEndian);
+                Thread.Sleep(50);
+                DO01_ModbusClient.Connect(DO01_ModuleIP, ModbusEndianness.BigEndian);
+                Thread.Sleep(50);
+                DO01_ModbusClient.Connect(DO02_ModuleIP, ModbusEndianness.BigEndian);
+                Thread.Sleep(50);
+                DI_ModbusClient.Connect(DI_ModuleIP, ModbusEndianness.BigEndian);
+                Thread.Sleep(50);
 
                 ushort[] values_buff =
                 {
@@ -1061,12 +1064,13 @@ namespace VirtualDriverApp
             public NetworkDeviceConfig AIModule1 { get; set; }
             public NetworkDeviceConfig AIModule2 { get; set; }
             public NetworkDeviceConfig DIModule { get; set; }
-            public NetworkDeviceConfig DOModule { get; set; }
+            public NetworkDeviceConfig DOModule1 { get; set; }
+            public NetworkDeviceConfig DOModule2 { get; set; }
         }
 
         private void hslButton2_Click(object sender, EventArgs e)
         {
-            PCS_DIRECT = 2;
+            PCS_WORK_MODE = 2;
             Branch_Cur1_BASE = -(float)388.7;
             Branch_Cur2_BASE = -(float)386.5;
             hslButton1.OriginalColor = Color.DimGray;
@@ -1080,7 +1084,7 @@ namespace VirtualDriverApp
 
         private void hslButton3_Click(object sender, EventArgs e)
         {
-            PCS_DIRECT = 0;
+            PCS_WORK_MODE = 0;
             Branch_Cur1_BASE = (float)2.5;
             Branch_Cur2_BASE = (float)2.5;
             hslButton1.OriginalColor = Color.DimGray;
@@ -1227,7 +1231,7 @@ namespace VirtualDriverApp
                 label10.Text = string.Empty;
             }
 
-            if (PCS_DIRECT == 1)
+            if (PCS_WORK_MODE == 1)
             {
 
                 if (A_ES_VOLT_BASE > A_ES_MAX_VOLT)
@@ -1258,7 +1262,7 @@ namespace VirtualDriverApp
                     {
                         Thread.Sleep(5000);
                         {
-                            PCS_DIRECT = 2;
+                            PCS_WORK_MODE = 2;
                             Branch_Cur1_BASE = -(float)388.7;
                             Branch_Cur2_BASE = -(float)386.5;
                             hslButton1.OriginalColor = Color.DimGray;
@@ -1310,7 +1314,7 @@ namespace VirtualDriverApp
                 }
             }
 
-            if (PCS_DIRECT == 2)
+            if (PCS_WORK_MODE == 2)
             {
 
                 if (A_ES_VOLT_BASE < A_ES_MIN_VOLT)
@@ -1341,7 +1345,7 @@ namespace VirtualDriverApp
                     {
                         Thread.Sleep(5000);
 
-                        PCS_DIRECT = 1;
+                        PCS_WORK_MODE = 1;
                         hslTitle1.TextRight = "充电运行中";
                         hslTitle1.RightTextColor = Color.Lime;
                         Branch_Cur1_BASE = (float)372.7;

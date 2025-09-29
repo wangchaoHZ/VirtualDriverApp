@@ -25,8 +25,12 @@
     "IPAddress": "192.168.1.102",
     "Port": 502
   },
-  "DOModule": {
+  "DOModule1": {
     "IPAddress": "192.168.1.103",
+    "Port": 502
+  },
+  "DOModule2": {
+    "IPAddress": "192.168.1.104",
     "Port": 502
   }
 }
