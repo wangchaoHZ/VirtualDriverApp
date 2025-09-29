@@ -1392,7 +1392,7 @@
             this.hslProgressColorful1.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
             this.hslProgressColorful1.Size = new System.Drawing.Size(487, 45);
             this.hslProgressColorful1.TabIndex = 55;
-            this.hslProgressColorful1.Load += new System.EventHandler(this.hslProgressColorful1_Load);
+            //this.hslProgressColorful1.Load += new System.EventHandler(this.hslProgressColorful1_Load);
             // 
             // label28
             // 
@@ -1433,7 +1433,7 @@
             this.label30.Size = new System.Drawing.Size(92, 31);
             this.label30.TabIndex = 60;
             this.label30.Text = "4#电堆";
-            this.label30.Click += new System.EventHandler(this.label30_Click);
+            //this.label30.Click += new System.EventHandler(this.label30_Click);
             // 
             // label26
             // 

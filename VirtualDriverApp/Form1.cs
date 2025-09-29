@@ -46,6 +46,9 @@ namespace VirtualDriverApp
                     throw new FileNotFoundException("配置文件未找到", filePath);
 
                 string json = File.ReadAllText(filePath);
+
+                Console.WriteLine(json);  // 打印原始JSON，确认实际加载的内容
+
                 return JsonConvert.DeserializeObject<AppConfig>(json);
             }
         }
@@ -435,15 +438,21 @@ namespace VirtualDriverApp
                 return;
             }
 
+            Console.WriteLine($"AIModule1 IP: {config.AIModule1?.IPAddress}");
+            Console.WriteLine($"AIModule2 IP: {config.AIModule2?.IPAddress}");
+            Console.WriteLine($"DIModule IP: {config.DIModule?.IPAddress}");
+            Console.WriteLine($"DOModule1 IP: {config.DOModule1?.IPAddress}");
+            Console.WriteLine($"DOModule2 IP: {config.DOModule2?.IPAddress}");
+
             // 提取串口
             VFD_COM_PORT = config.VFBDevice.PortName;
             VBT_COM_PORT = config.VoltDevice.PortName;
             // IP配置提取
             AI01_ModuleIP = config.AIModule1.IPAddress;
             AI02_ModuleIP = config.AIModule1.IPAddress;
+            DI_ModuleIP = config.DIModule.IPAddress;
             DO01_ModuleIP = config.DOModule1.IPAddress;
             DO02_ModuleIP = config.DOModule2.IPAddress;
-            DI_ModuleIP = config.DIModule.IPAddress;
 
             // 压力流量差值初始化
             PN1_PRESS_DIFF = 0.0;
@@ -725,7 +734,7 @@ namespace VirtualDriverApp
                     P2_DJY_TEMP
                 };
 
-                AI01_ModbusClient.WriteMultipleRegisters(AI01_SLAVE_ID, startAddress, values);
+                AI01_ModbusClient.WriteMultipleRegisters(1, startAddress, values);
 
                 ushort[] values_buff =
                 {
@@ -743,7 +752,7 @@ namespace VirtualDriverApp
                     0,
                 };
 
-                AI02_ModbusClient.WriteMultipleRegisters(AI02_SLAVE_ID, startAddress, values_buff);
+                AI02_ModbusClient.WriteMultipleRegisters(1, startAddress, values_buff);
             });
         }
 
@@ -864,20 +873,6 @@ namespace VirtualDriverApp
             PN2_FLOW_DIFF = -PN2_FLOW_DIFF;
         }
 
-        private void label30_Click(object sender, EventArgs e)
-        {
-        }
-
-        private void hslProgressColorful1_Load(object sender, EventArgs e)
-        {
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-        }
-
-        //private 
-
         private void hslButton1_Click(object sender, EventArgs e)
         {
             PCS_WORK_MODE = 1;
@@ -916,7 +911,7 @@ namespace VirtualDriverApp
 
             Update_RTU_Regs();
 
-            Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32);
+            Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(1, 0, 32);
 
             for (int i = 0; i < 32; i++)
             {
@@ -983,39 +978,42 @@ namespace VirtualDriverApp
         {
             if (hslButton8.Text == "启动模拟器")
             {
-                // 设置串口配置
-                ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-                Thread.Sleep(20);
-                // 启动共享的 Modbus 线程
-                ModbusRtuSlave.Start();
-                Thread.Sleep(50);
+                //// 设置串口配置
+                //ModbusRtuSlave.SetSerialPortSettings(VFD_COM_PORT, 9600, Parity.None, 8, StopBits.One);
+                //Thread.Sleep(20);
+                //// 启动共享的 Modbus 线程
+                //ModbusRtuSlave.Start();
+                //Thread.Sleep(50);
 
-                // 设置串口配置
-                ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
-                Thread.Sleep(20);
-                // 启动共享的 Modbus 线程
-                ModbusRtuSlaveVBT.Start();
-                Thread.Sleep(50);
+                //// 设置串口配置
+                //ModbusRtuSlaveVBT.SetSerialPortSettings(VBT_COM_PORT, 9600, Parity.None, 8, StopBits.One);
+                //Thread.Sleep(20);
+                //// 启动共享的 Modbus 线程
+                //ModbusRtuSlaveVBT.Start();
+                //Thread.Sleep(50);
 
-                // ModbusTcpClient实例化
-                AI01_ModbusClient = new ModbusTcpClient();
-                AI02_ModbusClient = new ModbusTcpClient();
-                DO01_ModbusClient = new ModbusTcpClient();
-                DO02_ModbusClient = new ModbusTcpClient();
-                DI_ModbusClient = new ModbusTcpClient();
+                //// ModbusTcpClient实例化
+                //AI01_ModbusClient = new ModbusTcpClient();
+                //AI02_ModbusClient = new ModbusTcpClient();
+                //DO01_ModbusClient = new ModbusTcpClient();
+                //DO02_ModbusClient = new ModbusTcpClient();
+                //DI_ModbusClient = new ModbusTcpClient();
 
-                // 依次连接
-                AI01_ModbusClient.Connect(AI01_ModuleIP, ModbusEndianness.BigEndian);
-                Thread.Sleep(50);
-                AI02_ModbusClient.Connect(AI02_ModuleIP, ModbusEndianness.BigEndian);
-                Thread.Sleep(50);
-                DO01_ModbusClient.Connect(DO01_ModuleIP, ModbusEndianness.BigEndian);
-                Thread.Sleep(50);
-                DO01_ModbusClient.Connect(DO02_ModuleIP, ModbusEndianness.BigEndian);
-                Thread.Sleep(50);
-                DI_ModbusClient.Connect(DI_ModuleIP, ModbusEndianness.BigEndian);
-                Thread.Sleep(50);
+                //// 依次连接
+                //AI01_ModbusClient.Connect(AI01_ModuleIP, ModbusEndianness.BigEndian);
+                //Thread.Sleep(50);
+                //AI02_ModbusClient.Connect(AI02_ModuleIP, ModbusEndianness.BigEndian);
+                //Thread.Sleep(50);
+                //DO01_ModbusClient.Connect(DO01_ModuleIP, ModbusEndianness.BigEndian);
+                //Thread.Sleep(50);
+                //DO01_ModbusClient.Connect(DO02_ModuleIP, ModbusEndianness.BigEndian);
+                //Thread.Sleep(50);
+                //DI_ModbusClient.Connect(DI_ModuleIP, ModbusEndianness.BigEndian);
+                //Thread.Sleep(50);
 
+                // 删除未使用的 values_buff 变量声明（在 hslButton8_Click 方法中）
+                // 原代码：
+                /*
                 ushort[] values_buff =
                 {
                     1,
@@ -1026,12 +1024,9 @@ namespace VirtualDriverApp
                     1,
                     1,
                     1
-            };
-
-                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
-
-
-
+                };
+                //DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
+                */
                 hslButton8.OriginalColor = Color.Lime;
                 hslButton8.Text = "关闭模拟器";
             }
@@ -1164,11 +1159,6 @@ namespace VirtualDriverApp
         {
             PN2_FLOW_DIFF = trackBar4.Value / 1000.0;
             textBox20.Text = PN2_FLOW_DIFF.ToString("F3");
-        }
-
-        private void panel6_Paint(object sender, PaintEventArgs e)
-        {
-
         }
 
         private void checkBox15_CheckedChanged(object sender, EventArgs e)
