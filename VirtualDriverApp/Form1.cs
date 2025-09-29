@@ -1135,7 +1135,7 @@ namespace VirtualDriverApp
         double B_ES_ADJUST_STEP = 0.0;
 
         double A_ES_MAX_VOLT = 80.5;
-        double B_ES_MAX_VOLT = 80.8;
+        double B_ES_MAX_VOLT = 80.6;
 
         double A_ES_MIN_VOLT = 11.6;
         double B_ES_MIN_VOLT = 11.9;
@@ -1152,8 +1152,8 @@ namespace VirtualDriverApp
         int CHARGE_TICK_CNT = 0;
         int DISCHARGE_TICK_CNT = 0;
 
-        UInt32 ChargeAddCount = 0;
-        UInt32 DischargeAddCount = 0;
+        int ChargeAddCount = 0;
+        int DischargeAddCount = 0;
         private void timer4_Tick(object sender, EventArgs e)
         {
 
@@ -1246,7 +1246,6 @@ namespace VirtualDriverApp
 
                     A_ES_VOLT_BASE = A_ES_VOLT_BASE + A_ES_ADJUST_STEP;
                     B_ES_VOLT_BASE = B_ES_VOLT_BASE + B_ES_ADJUST_STEP;
-
 
                 }
             }
@@ -1785,13 +1784,6 @@ namespace Modbus
         }
     }
 }
-//public static class LogHelper
-//{
-//    // 创建全局静态的 Logger 实例
-//    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
-//    public static Logger Logger => logger;
-//}
 
 public static class LogHelper
 {
@@ -1808,7 +1800,6 @@ public static class LogHelper
         }
     }
 }
-
 
 
 public class ModbusRtuSlaveVBT
