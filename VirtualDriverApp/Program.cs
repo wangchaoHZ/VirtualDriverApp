@@ -11,9 +11,11 @@ namespace VirtualDriverApp
         [STAThread]
         static void Main()
         {
+            LogHelper.Init();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
+            Serilog.Log.CloseAndFlush();
         }
     }
 }

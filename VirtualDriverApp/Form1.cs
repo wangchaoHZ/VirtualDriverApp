@@ -1,4 +1,8 @@
-﻿using System;
+﻿using FluentModbus;
+using Modbus;
+using Newtonsoft.Json;
+using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -7,10 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using FluentModbus;
-using Modbus;
-using Newtonsoft.Json;
-using NLog;
+
 
 namespace VirtualDriverApp
 {
@@ -66,16 +67,16 @@ namespace VirtualDriverApp
         private readonly ushort[] DI_RESULT = new ushort[32];
 
         // 泵运行电流
-        private double P1_Cur;
-        private double N1_Cur;
-        private double P2_Cur;
-        private double N2_Cur;
+        private double P1_Cur = 0.0;
+        private double N1_Cur = 0.0; 
+        private double P2_Cur = 0.0;
+        private double N2_Cur = 0.0;
 
         // 压力 & 流量
-        private double PN1_PRESS_DIFF;
-        private double PN2_PRESS_DIFF;
-        private double PN1_FLOW_DIFF;
-        private double PN2_FLOW_DIFF;
+        private double PN1_PRESS_DIFF = 0.0;
+        private double PN2_PRESS_DIFF = 0.0;
+        private double PN1_FLOW_DIFF  = 0.0;
+        private double PN2_FLOW_DIFF  = 0.0;
 
         // AB侧电堆电压基准
         private double A_ES_VOLT_BASE = 12.12;
@@ -263,10 +264,10 @@ namespace VirtualDriverApp
 
             Console.WriteLine("-----------> Branch_Cur1:" + (short)A_CURRENT_VOLT + " Branch_Cur2:" + (short)B_CURRENT_VOLT);
 
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("支路-1(A):" + Branch_Cur1 + " 支路-2(A):" + Branch_Cur2);
-            LogHelper.Logger.Info("支路-1(SetV):" + (short)A_CURRENT_VOLT + " 支路-2(SetV):" + (short)B_CURRENT_VOLT);
-            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Information("---------------------------------------------");
+            LogHelper.Logger.Information("支路-1(A):" + Branch_Cur1 + " 支路-2(A):" + Branch_Cur2);
+            LogHelper.Logger.Information("支路-1(SetV):" + (short)A_CURRENT_VOLT + " 支路-2(SetV):" + (short)B_CURRENT_VOLT);
+            LogHelper.Logger.Information("---------------------------------------------");
 
             float Branch_Cur1_Show;
             float Branch_Cur2_Show;
@@ -417,6 +418,8 @@ namespace VirtualDriverApp
             return soc;
         }
 
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
             hslTitle1.TextLeft = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -424,8 +427,9 @@ namespace VirtualDriverApp
             // W:1940
             // H:1080
             //this.FormBorderStyle = FormBorderStyle.None;
+            // 程序启动时（如Main函数中）添加
             // 记录启动信息
-            LogHelper.Logger.Info("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            LogHelper.Logger.Information("APP程序启动时间点 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
             // 配置文件路径和加载
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppConfig.json");
@@ -659,15 +663,15 @@ namespace VirtualDriverApp
             ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
             ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
 
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("P1压力给定(mA):" + P1_PV_SET + " N1压力给定(mA):" + N1_PV_SET);
-            LogHelper.Logger.Info("P2压力给定(mA):" + P2_PV_SET + " N2压力给定(mA):" + N2_PV_SET);
-            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Information("---------------------------------------------");
+            LogHelper.Logger.Information("P1压力给定(mA):" + P1_PV_SET + " N1压力给定(mA):" + N1_PV_SET);
+            LogHelper.Logger.Information("P2压力给定(mA):" + P2_PV_SET + " N2压力给定(mA):" + N2_PV_SET);
+            LogHelper.Logger.Information("---------------------------------------------");
 
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("P1流量给定(mA):" + P1_FV_SET + " N1流量给定(mA):" + N1_FV_SET);
-            LogHelper.Logger.Info("P2流量给定(mA):" + P2_FV_SET + " N2流量给定(mA):" + N2_FV_SET);
-            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Information("---------------------------------------------");
+            LogHelper.Logger.Information("P1流量给定(mA):" + P1_FV_SET + " N1流量给定(mA):" + N1_FV_SET);
+            LogHelper.Logger.Information("P2流量给定(mA):" + P2_FV_SET + " N2流量给定(mA):" + N2_FV_SET);
+            LogHelper.Logger.Information("---------------------------------------------");
 
             double temp_sensor_range = 120.0;
             double temp_sensor_min = -20.0;
@@ -676,10 +680,10 @@ namespace VirtualDriverApp
             ushort N1_DJY_TEMP = (ushort)(((trackBar7.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
             ushort P2_DJY_TEMP = (ushort)(((trackBar5.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
             ushort N2_DJY_TEMP = (ushort)(((trackBar6.Value / 10.0 - temp_sensor_min) / temp_sensor_range) * 16000.0 + 4000.0);
-            LogHelper.Logger.Info("---------------------------------------------");
-            LogHelper.Logger.Info("P1电解液温度(mA):" + P1_DJY_TEMP + " N1电解液温度(mA):" + N1_DJY_TEMP);
-            LogHelper.Logger.Info("P2电解液温度(mA):" + P2_DJY_TEMP + " N2电解液温度(mA):" + N2_DJY_TEMP);
-            LogHelper.Logger.Info("---------------------------------------------");
+            LogHelper.Logger.Information("---------------------------------------------");
+            LogHelper.Logger.Information("P1电解液温度(mA):" + P1_DJY_TEMP + " N1电解液温度(mA):" + N1_DJY_TEMP);
+            LogHelper.Logger.Information("P2电解液温度(mA):" + P2_DJY_TEMP + " N2电解液温度(mA):" + N2_DJY_TEMP);
+            LogHelper.Logger.Information("---------------------------------------------");
 
             double cyg_temp_sensor_range = 100.0;
             double cyg_temp_sensor_min = 0.0;
@@ -904,7 +908,7 @@ namespace VirtualDriverApp
             string result = string.Join(", ", DI_RESULT);
             Console.WriteLine("Input Registers: " + result);
 
-            LogHelper.Logger.Info("DI模块采集:" + result);
+            LogHelper.Logger.Information("DI模块采集:" + result);
 
             if (DI_RESULT[1] == 1)
             {
@@ -1219,7 +1223,7 @@ namespace VirtualDriverApp
                 {
                     CHARGE_TICK_CNT++;
 
-                    LogHelper.Logger.Info("充电操作步数:" + CHARGE_TICK_CNT);
+                    LogHelper.Logger.Information("充电操作步数:" + CHARGE_TICK_CNT);
 
                     if (A_ES_ADJUST_STEP == 0.0)
                     {
@@ -1300,7 +1304,7 @@ namespace VirtualDriverApp
                 {
                     DISCHARGE_TICK_CNT++;
 
-                    LogHelper.Logger.Info("放电操作步数:" + DISCHARGE_TICK_CNT);
+                    LogHelper.Logger.Information("放电操作步数:" + DISCHARGE_TICK_CNT);
 
                     if (A_ES_ADJUST_STEP == 0.0)
                     {
@@ -1787,21 +1791,41 @@ namespace Modbus
 
 public static class LogHelper
 {
-    private static Logger _logger;
-    public static Logger Logger
+    private static ILogger _logger;
+
+    /// <summary>
+    /// 初始化Serilog日志，按天分割，保留最近3天
+    /// </summary>
+    public static void Init()
+    {
+        string logDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+        System.IO.Directory.CreateDirectory(logDir);
+        string logPath = System.IO.Path.Combine(logDir, "LOG.log");  // 基础名
+
+        _logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.File(
+                logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 3,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level}] {Message}{NewLine}{Exception}",
+                shared: false
+            )
+            .CreateLogger();
+    }
+
+    public static ILogger Logger
     {
         get
         {
             if (_logger == null)
             {
-                _logger = LogManager.GetCurrentClassLogger();
+                Init();
             }
             return _logger;
         }
     }
 }
-
-
 public class ModbusRtuSlaveVBT
 {
     private static bool isPortOpen = false;  // 是否已打开串口
