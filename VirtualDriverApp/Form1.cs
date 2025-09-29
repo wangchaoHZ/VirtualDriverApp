@@ -692,14 +692,6 @@ namespace VirtualDriverApp
             ushort N1_CYG_TEMP = (ushort)(((trackBar11.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
             ushort P2_CYG_TEMP = (ushort)(((trackBar10.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
             ushort N2_CYG_TEMP = (ushort)(((trackBar9.Value / 10.0 - cyg_temp_sensor_min) / cyg_temp_sensor_range) * 16000.0 + 4000.0);
-
-            ushort P1_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
-            ushort P2_H2_SET = (ushort)((8000.0 / 40000.0) * 16000.0 + 4000.0);
-            //  
-            ushort POWER_BOX_H2_SET = (ushort)((10000.0 / 40000.0) * 16000.0 + 4000.0);
-
-            //Console.WriteLine("P1_H2_SET"+ P1_H2_SET);
-
             //发送 Modbus 请求到一个新线程
             await Task.Run(() =>
             {
@@ -758,11 +750,7 @@ namespace VirtualDriverApp
         {
             try
             {
-
-                {
-                    PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
-                }
-
+                PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
                 Console.WriteLine("转换成功: " + PN1_PRESS_DIFF);
             }
             catch (FormatException)
@@ -781,10 +769,7 @@ namespace VirtualDriverApp
         {
             try
             {
-
-                {
-                    PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
-                }
+                PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
                 Console.WriteLine("转换成功: " + PN1_FLOW_DIFF);
             }
             catch (FormatException)
@@ -803,10 +788,7 @@ namespace VirtualDriverApp
         {
             try
             {
-
-                {
-                    PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
-                }
+                PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
                 Console.WriteLine("转换成功: " + PN2_PRESS_DIFF);
             }
             catch (FormatException)
@@ -2004,6 +1986,7 @@ public class ModbusRtuSlaveVBT
         int bytesToRead = serialPort.BytesToRead;
         byte[] request = new byte[bytesToRead];
         serialPort.Read(request, 0, bytesToRead);
+
 
         byte slaveAddress = request[0];  // 获取请求中的从站地址
 
