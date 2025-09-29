@@ -185,21 +185,21 @@ namespace VirtualDriverApp
             B_OCV = B_OCV_VOLT_BASE;
 
             // 界面显示
-            textBox24.Text = A_ES_VOLT[0].ToString("F1");
-            textBox25.Text = A_ES_VOLT[1].ToString("F1");
-            textBox27.Text = A_ES_VOLT[2].ToString("F1");
-            textBox15.Text = A_ES_VOLT[3].ToString("F1");
-            textBox23.Text = A_ES_VOLT[4].ToString("F1");
-            textBox26.Text = A_ES_VOLT[5].ToString("F1");
-            textBox34.Text = A_OCV.ToString("F4");
+            textBox24.Text = A_ES_VOLT[0].ToString("F1") + "V";
+            textBox25.Text = A_ES_VOLT[1].ToString("F1") + "V";
+            textBox27.Text = A_ES_VOLT[2].ToString("F1") + "V";
+            textBox15.Text = A_ES_VOLT[3].ToString("F1") + "V";
+            textBox23.Text = A_ES_VOLT[4].ToString("F1") + "V";
+            textBox26.Text = A_ES_VOLT[5].ToString("F1") + "V";
+            textBox34.Text = A_OCV.ToString("F4") + "V";
             // 界面显示
-            textBox35.Text = B_ES_VOLT[0].ToString("F1");
-            textBox33.Text = B_ES_VOLT[1].ToString("F1");
-            textBox31.Text = B_ES_VOLT[2].ToString("F1");
-            textBox32.Text = B_ES_VOLT[3].ToString("F1");
-            textBox30.Text = B_ES_VOLT[4].ToString("F1");
-            textBox29.Text = B_ES_VOLT[5].ToString("F1");
-            textBox28.Text = B_OCV.ToString("F4");
+            textBox35.Text = B_ES_VOLT[0].ToString("F1") + "V";
+            textBox33.Text = B_ES_VOLT[1].ToString("F1") + "V";
+            textBox31.Text = B_ES_VOLT[2].ToString("F1") + "V";
+            textBox32.Text = B_ES_VOLT[3].ToString("F1") + "V";
+            textBox30.Text = B_ES_VOLT[4].ToString("F1") + "V";
+            textBox29.Text = B_ES_VOLT[5].ToString("F1") + "V";
+            textBox28.Text = B_OCV.ToString("F4") + "V";
         }
 
         public void EstackAndOcvVoltUpdateShow()
@@ -222,21 +222,21 @@ namespace VirtualDriverApp
             B_OCV = B_OCV_VOLT_BASE + RandomFloatGenerator() * 0.000245;
 
             // 界面显示
-            textBox24.Text = A_ES_VOLT[0].ToString("F1");
-            textBox25.Text = A_ES_VOLT[1].ToString("F1");
-            textBox27.Text = A_ES_VOLT[2].ToString("F1");
-            textBox15.Text = A_ES_VOLT[3].ToString("F1");
-            textBox23.Text = A_ES_VOLT[4].ToString("F1");
-            textBox26.Text = A_ES_VOLT[5].ToString("F1");
-            textBox34.Text = A_OCV.ToString("F4");
+            textBox24.Text = A_ES_VOLT[0].ToString("F1") + "V";
+            textBox25.Text = A_ES_VOLT[1].ToString("F1") + "V";
+            textBox27.Text = A_ES_VOLT[2].ToString("F1") + "V";
+            textBox15.Text = A_ES_VOLT[3].ToString("F1") + "V";
+            textBox23.Text = A_ES_VOLT[4].ToString("F1") + "V";
+            textBox26.Text = A_ES_VOLT[5].ToString("F1") + "V";
+            textBox34.Text = A_OCV.ToString("F4") + "V";
             // 界面显示
-            textBox35.Text = B_ES_VOLT[0].ToString("F1");
-            textBox33.Text = B_ES_VOLT[1].ToString("F1");
-            textBox31.Text = B_ES_VOLT[2].ToString("F1");
-            textBox32.Text = B_ES_VOLT[3].ToString("F1");
-            textBox30.Text = B_ES_VOLT[4].ToString("F1");
-            textBox29.Text = B_ES_VOLT[5].ToString("F1");
-            textBox28.Text = B_OCV.ToString("F4");
+            textBox35.Text = B_ES_VOLT[0].ToString("F1") + "V";
+            textBox33.Text = B_ES_VOLT[1].ToString("F1") + "V";
+            textBox31.Text = B_ES_VOLT[2].ToString("F1") + "V";
+            textBox32.Text = B_ES_VOLT[3].ToString("F1") + "V";
+            textBox30.Text = B_ES_VOLT[4].ToString("F1") + "V";
+            textBox29.Text = B_ES_VOLT[5].ToString("F1") + "V";
+            textBox28.Text = B_OCV.ToString("F4") + "V";
         }
 
         private float Branch_Cur1;
@@ -618,24 +618,7 @@ namespace VirtualDriverApp
             textBox6.Text = ((double)slave4.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
             textBox5.Text = ((double)slave4.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
             N2_Cur = (double)slave4.GetHoldingRegister(0x3004) / 100.0;
-
-
         }
-        private void button2_Click(object sender, EventArgs e)
-        {
-            //Application.Exit();
-        }
-
-        private void label9_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textBox14_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private async void timer2_Tick(object sender, EventArgs e)
         {
             double flow_max = 60.0; double flow_min = 0.0;
@@ -933,45 +916,19 @@ namespace VirtualDriverApp
                 hslMoveText1.Text = "PCS连锁未建立";
                 hslMoveText1.ForeColor = Color.Red;
             }
-
-           
-        }
-
-        private void checkBox9_CheckedChanged_1(object sender, EventArgs e)
-        {
-        }
-
-        private void checkBox10_CheckedChanged_1(object sender, EventArgs e)
-        {
-        }
-
-        private void hslLabel1_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void checkBox14_CheckedChanged(object sender, EventArgs e)
         {
+            // 支路1电流故障
             if (checkBox14.Checked)
             {
                 Branch_Cur1_BASE = 1000;
-                //Branch_Cur2 = 1500;
             }
             else
             {
                 Branch_Cur1_BASE = 0;
-                //Branch_Cur2 = 0;
             }
-        }
-
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void groupBox5_Enter(object sender, EventArgs e)
-        {
-
         }
 
         private void hslButton8_Click(object sender, EventArgs e)
@@ -1163,26 +1120,16 @@ namespace VirtualDriverApp
 
         private void checkBox15_CheckedChanged(object sender, EventArgs e)
         {
+            // 支路2电流故障
             if (checkBox15.Checked)
             {
-                //Branch_Cur1 = 1500;
                 Branch_Cur2_BASE = 1000;
             }
             else
             {
-                //Branch_Cur1 = 0;
                 Branch_Cur2_BASE = 0;
             }
         }
-
-        private void checkBox12_CheckedChanged_1(object sender, EventArgs e)
-        {
-        }
-
-        private void checkBox11_CheckedChanged(object sender, EventArgs e)
-        {
-        }
-
 
         double A_ES_ADJUST_STEP = 0.0;
         double B_ES_ADJUST_STEP = 0.0;
@@ -1354,23 +1301,20 @@ namespace VirtualDriverApp
                 {
                     DISCHARGE_TICK_CNT++;
 
-                    LogHelper.Logger.Info("电操作步数:" + DISCHARGE_TICK_CNT);
+                    LogHelper.Logger.Info("放电操作步数:" + DISCHARGE_TICK_CNT);
 
                     if (A_ES_ADJUST_STEP == 0.0)
                     {
                         A_ES_ADJUST_STEP = (A_ES_MAX_VOLT - A_ES_MIN_VOLT) / time_add_freq;
                     }
-
                     if (B_ES_ADJUST_STEP == 0.0)
                     {
                         B_ES_ADJUST_STEP = (B_ES_MAX_VOLT - B_ES_MIN_VOLT) / time_add_freq;
                     }
-
                     if (A_OCV_ADJUST_STEP == 0.0)
                     {
                         A_OCV_ADJUST_STEP = (A_OCV_MAX_VOLT - A_OCV_MIN_VOLT) / time_add_freq;
                     }
-
                     if (B_OCV_ADJUST_STEP == 0.0)
                     {
                         B_OCV_ADJUST_STEP = (B_OCV_MAX_VOLT - B_OCV_MIN_VOLT) / time_add_freq;
@@ -1385,21 +1329,6 @@ namespace VirtualDriverApp
             }
             EstackAndOcvVoltUpdateShow();
             Update_RTU_Regs();
-        }
-
-        private void textBox10_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label11_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void contextMenuStrip1_Opening(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-
         }
     }
 }

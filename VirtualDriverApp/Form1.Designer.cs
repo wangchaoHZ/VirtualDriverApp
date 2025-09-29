@@ -205,9 +205,9 @@
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(247, 58);
             this.textBox1.TabIndex = 1;
-            this.textBox1.Text = "30.0HZ";
+            this.textBox1.Text = "0.0HZ";
             this.textBox1.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
+            //this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
             // 
             // timer1
             // 
@@ -379,7 +379,7 @@
             this.textBox4.Name = "textBox4";
             this.textBox4.Size = new System.Drawing.Size(247, 58);
             this.textBox4.TabIndex = 1;
-            this.textBox4.Text = "30.0HZ";
+            this.textBox4.Text = "0.0HZ";
             this.textBox4.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // groupBox3
@@ -470,7 +470,7 @@
             this.textBox6.Name = "textBox6";
             this.textBox6.Size = new System.Drawing.Size(247, 58);
             this.textBox6.TabIndex = 1;
-            this.textBox6.Text = "30.0HZ";
+            this.textBox6.Text = "0.0HZ";
             this.textBox6.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // groupBox4
@@ -561,7 +561,7 @@
             this.textBox8.Name = "textBox8";
             this.textBox8.Size = new System.Drawing.Size(247, 58);
             this.textBox8.TabIndex = 1;
-            this.textBox8.Text = "30.0HZ";
+            this.textBox8.Text = "0.0HZ";
             this.textBox8.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // label9
@@ -575,7 +575,7 @@
             this.label9.Size = new System.Drawing.Size(651, 58);
             this.label9.TabIndex = 10;
             this.label9.Text = "全钒液流电池系统模拟终端V3.2";
-            this.label9.Click += new System.EventHandler(this.label9_Click);
+            //this.label9.Click += new System.EventHandler(this.label9_Click);
             // 
             // label12
             // 
@@ -601,7 +601,7 @@
             this.textBox10.TabIndex = 19;
             this.textBox10.Text = "1.234";
             this.textBox10.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.textBox10.TextChanged += new System.EventHandler(this.textBox10_TextChanged);
+            //this.textBox10.TextChanged += new System.EventHandler(this.textBox10_TextChanged);
             // 
             // label13
             // 
@@ -729,7 +729,7 @@
             this.textBox14.TabIndex = 26;
             this.textBox14.Text = "1.234";
             this.textBox14.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.textBox14.TextChanged += new System.EventHandler(this.textBox14_TextChanged);
+            //this.textBox14.TextChanged += new System.EventHandler(this.textBox14_TextChanged);
             // 
             // groupBox5
             // 
@@ -796,7 +796,7 @@
             this.groupBox5.TabIndex = 46;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "容量单元";
-            this.groupBox5.Enter += new System.EventHandler(this.groupBox5_Enter);
+            //this.groupBox5.Enter += new System.EventHandler(this.groupBox5_Enter);
             // 
             // trackBar4
             // 
@@ -1392,7 +1392,6 @@
             this.hslProgressColorful1.ProgressStyle = HslControls.HslProgressStyle.Horizontal;
             this.hslProgressColorful1.Size = new System.Drawing.Size(487, 45);
             this.hslProgressColorful1.TabIndex = 55;
-            //this.hslProgressColorful1.Load += new System.EventHandler(this.hslProgressColorful1_Load);
             // 
             // label28
             // 
@@ -1433,7 +1432,6 @@
             this.label30.Size = new System.Drawing.Size(92, 31);
             this.label30.TabIndex = 60;
             this.label30.Text = "4#电堆";
-            //this.label30.Click += new System.EventHandler(this.label30_Click);
             // 
             // label26
             // 
@@ -1726,7 +1724,7 @@
             this.hslLabel1.TabIndex = 66;
             this.hslLabel1.Text = "支路1电流";
             this.hslLabel1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.hslLabel1.Click += new System.EventHandler(this.hslLabel1_Click);
+            //this.hslLabel1.Click += new System.EventHandler(this.hslLabel1_Click);
             // 
             // hslGauge2
             // 
@@ -1839,7 +1837,7 @@
             this.hslTitle1.RightTextColor = System.Drawing.Color.White;
             this.hslTitle1.Size = new System.Drawing.Size(2567, 81);
             this.hslTitle1.TabIndex = 56;
-            this.hslTitle1.Text = "全钒液流电池系统模拟终端";
+            this.hslTitle1.Text = "全钒液流电池系统模拟器";
             this.hslTitle1.TextRight = "运行状态";
             // 
             // timer3
