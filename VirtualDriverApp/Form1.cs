@@ -262,34 +262,18 @@ namespace VirtualDriverApp
             A_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur1);
             B_CURRENT_VOLT = (ushort)ConvertToCurrentVolt(Branch_Cur2);
 
-            Console.WriteLine("-----------> Branch_Cur1:" + (short)A_CURRENT_VOLT + " Branch_Cur2:" + (short)B_CURRENT_VOLT);
-
             LogHelper.Logger.Information("---------------------------------------------");
             LogHelper.Logger.Information("支路-1(A):" + Branch_Cur1 + " 支路-2(A):" + Branch_Cur2);
             LogHelper.Logger.Information("支路-1(SetV):" + (short)A_CURRENT_VOLT + " 支路-2(SetV):" + (short)B_CURRENT_VOLT);
             LogHelper.Logger.Information("---------------------------------------------");
 
-            float Branch_Cur1_Show;
-            float Branch_Cur2_Show;
+            float Branch_Cur1_Show = Math.Abs(Branch_Cur1); 
+            float Branch_Cur2_Show = Math.Abs(Branch_Cur2); 
 
-            if (PCS_WORK_MODE < 2)
-            {
-                Branch_Cur1_Show = Branch_Cur1;
-                Branch_Cur2_Show = Branch_Cur2;
-            }
-            else
-            {
-                Branch_Cur1_Show = -Branch_Cur1;
-                Branch_Cur2_Show = -Branch_Cur2;
-            }
+            hslGauge1.Value = Branch_Cur1_Show;
+            hslGauge2.Value = Branch_Cur2_Show;
 
-            int branch_cur1 = (int)((float)(Branch_Cur1_Show));
-            int branch_cur2 = (int)((float)(Branch_Cur2_Show));
-
-            hslGauge1.Value = (float)(branch_cur1);
-            hslGauge2.Value = (float)(branch_cur2);
-
-            uiDigitalLabel2.Value = hslGauge1.Value + hslGauge2.Value;
+            uiDigitalLabel2.Value = Branch_Cur1 + Branch_Cur2;
         }
 
         // 电解液温度基值
@@ -486,7 +470,6 @@ namespace VirtualDriverApp
         private int slave4_last_randomv = 0;
         private void timer1_Tick(object sender, EventArgs e)
         {
-            //
             if (slave1.GetFinalCurrent() > 100)
             {
                 int rdv = random.Next(0, 11);
@@ -713,7 +696,7 @@ namespace VirtualDriverApp
                     P2_DJY_TEMP
                 };
 
-                AI01_ModbusClient.WriteMultipleRegisters(1, startAddress, values);
+                //AI01_ModbusClient.WriteMultipleRegisters(1, startAddress, values);
 
                 ushort[] values_buff =
                 {
@@ -731,20 +714,9 @@ namespace VirtualDriverApp
                     0,
                 };
 
-                AI02_ModbusClient.WriteMultipleRegisters(1, startAddress, values_buff);
+                //AI02_ModbusClient.WriteMultipleRegisters(1, startAddress, values_buff);
             });
         }
-
-        // 封装发送 Modbus 请求的代码
-        private void SendModbusRequest(string portName, ushort registerAddress, ushort value)
-        {
-            // 构建 Modbus RTU 写单个寄存器请求帧
-            byte[] requestFrame = ModbusRTUSender.BuildWriteSingleRegisterRequest(0x01, registerAddress, value);
-
-            // 发送数据帧
-            ModbusRTUSender.SendModbusFrame(portName, requestFrame);
-        }
-
 
         private void textBox11_TextChanged(object sender, EventArgs e)
         {
@@ -847,8 +819,8 @@ namespace VirtualDriverApp
             PCS_WORK_MODE = 1;
             hslTitle1.TextRight = "充电运行中";
             hslTitle1.RightTextColor = Color.Lime;
-            Branch_Cur1_BASE = (float)372.7;
-            Branch_Cur2_BASE = (float)376.5;
+            Branch_Cur1_BASE = (float)383.7;
+            Branch_Cur2_BASE = (float)382.5;
             hslButton1.OriginalColor = Color.Lime;
             hslButton2.OriginalColor = Color.DimGray;
             hslButton3.OriginalColor = Color.DimGray;
@@ -869,8 +841,7 @@ namespace VirtualDriverApp
             hslProgressColorful1.Value = (int)(A_SOC * 100);
             hslProgressColorful2.Value = (int)(B_SOC * 100);
 
-            Console.WriteLine("< @A SOC >:" + A_SOC);
-            Console.WriteLine("< @B SOC >:" + B_SOC);
+            Console.WriteLine("@A SOC:" + A_SOC + "," + "@B SOC:" + B_SOC);
 
             Branch_Cur_UpdateShow();
 
@@ -880,12 +851,12 @@ namespace VirtualDriverApp
 
             Update_RTU_Regs();
 
-            Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(1, 0, 32);
+            //Span<byte> diWordSpan = DI_ModbusClient.ReadInputRegisters(1, 0, 32);
 
-            for (int i = 0; i < 32; i++)
-            {
-                DI_RESULT[i] = (ushort)((diWordSpan[i * 2] << 8) | diWordSpan[i * 2 + 1]);
-            }
+            //for (int i = 0; i < 32; i++)
+            //{
+            //    DI_RESULT[i] = (ushort)((diWordSpan[i * 2] << 8) | diWordSpan[i * 2 + 1]);
+            //}
 
             string result = string.Join(", ", DI_RESULT);
             Console.WriteLine("Input Registers: " + result);
@@ -970,6 +941,14 @@ namespace VirtualDriverApp
                 };
                 //DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 0, values_buff);
                 */
+                timer1.Enabled = true;
+                timer2.Enabled = true;
+                timer3.Enabled = true;
+                timer1.Start();
+                timer2.Start();
+                timer3.Start();
+
+
                 hslButton8.OriginalColor = Color.Lime;
                 hslButton8.Text = "关闭模拟器";
             }
@@ -1009,8 +988,8 @@ namespace VirtualDriverApp
         private void hslButton2_Click(object sender, EventArgs e)
         {
             PCS_WORK_MODE = 2;
-            Branch_Cur1_BASE = -(float)388.7;
-            Branch_Cur2_BASE = -(float)386.5;
+            Branch_Cur1_BASE = (float)0.0 - (float)318.7;
+            Branch_Cur2_BASE = (float)0.0 - (float)316.5;
             hslButton1.OriginalColor = Color.DimGray;
             hslButton2.OriginalColor = Color.Lime;
             hslButton3.OriginalColor = Color.DimGray;
