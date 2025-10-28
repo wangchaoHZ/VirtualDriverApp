@@ -141,9 +141,6 @@ namespace VirtualDriverApp
 
         double GetCurrentXX(double currentFrequency)
         {
-            Random random = new Random();
-            // 生成一个在 -50 到 50 之间的随机数
-            //int randomNumber = random.Next(1, 6);
             // 计算电流，最大频率 60Hz 对应最大电流 15A
             return (currentFrequency / 50.00) * 15.0;
         }
