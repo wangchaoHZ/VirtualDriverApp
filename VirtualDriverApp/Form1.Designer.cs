@@ -1833,7 +1833,6 @@
             this.hslTitle1.TabIndex = 56;
             this.hslTitle1.Text = "全钒液流电池系统模拟器";
             this.hslTitle1.TextRight = "运行状态";
-            //this.hslTitle1.Load += new System.EventHandler(this.hslTitle1_Load);
             // 
             // timer3
             // 
@@ -2099,7 +2098,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(31)))), ((int)(((byte)(63)))));
-            this.ClientSize = new System.Drawing.Size(2564, 1301);
+            this.ClientSize = new System.Drawing.Size(1902, 1033);
             this.Controls.Add(this.hslButton8);
             this.Controls.Add(this.hslTitle1);
             this.Controls.Add(this.groupBox9);
