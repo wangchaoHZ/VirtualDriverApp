@@ -98,8 +98,6 @@ namespace VirtualDriverApp
             label10.Text = "未启动";
             //textBox9.Clear();
 
-
-
             LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             //Console.WriteLine("CP")
 
@@ -114,10 +112,6 @@ namespace VirtualDriverApp
             textBox17.Text = PN2_PRESS_DIFF.ToString("F3");
             textBox20.Text = PN2_FLOW_DIFF.ToString("F2");
 
-            S1_H2 = trackBar4.Value;
-            S2_H2 = trackBar1.Value;
-            label33.Text = S1_H2.ToString() + "%";
-            label34.Text = S2_H2.ToString() + "%";
 
             // 获取所有可用的串口名称
             string[] portNames = SerialPort.GetPortNames();
@@ -509,18 +503,6 @@ namespace VirtualDriverApp
                 ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
                 ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
 
-                ushort S1_CUR_SET = 0;
-                ushort S2_CUR_SET = 0;
-
-
-                ushort S1_H2_SET = (ushort)(((double)(S1_H2) / 100.0) * 16000.0 + 4000.0);
-                ushort S2_H2_SET = (ushort)(((double)(S2_H2) / 100.0) * 16000.0 + 4000.0);
-
-                S1_H2_SET = (ushort)(S1_H2_SET + 120);
-                S2_H2_SET = (ushort)(S2_H2_SET + 120);
-
-                Console.WriteLine("S1 Cur Set:" + S1_CUR_SET.ToString() + "S2 Cur Set:" + S2_CUR_SET);
-
                 // 把 DI 读取放到后台线程，并串行化访问，避免在 UI 线程阻塞
                 byte[] diWordArray = null;
                 try
@@ -564,52 +546,6 @@ namespace VirtualDriverApp
                 }
 
 
-                if (DI_InputRegisters[4] == 1)
-                {
-                    label31.Text = "气泵开";
-                    label31.ForeColor = Color.Lime;
-
-
-                    double S1_CURV_Show = 1.2; // 基线
-                    double s1Jitter = 0.1 + random.NextDouble() * 0.1; // 0.1~0.3
-                    S1_CURV_Show += (random.Next(0, 2) == 0 ? -1 : 1) * s1Jitter; // 正负随机波动
-                    S1_CURV_Show = Math.Max(0, Math.Min(3.5, S1_CURV_Show));
-
-                    //double S1_CURV_Show = (1.2);
-                    textBox22.Text = S1_CURV_Show.ToString("F1") + "A";
-                    S1_CUR_SET = (ushort)((S1_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-                }
-                else
-                {
-                    label31.Text = "气泵关";
-                    label31.ForeColor = Color.Black;
-                    double S1_CURV_Show = (0);
-                    textBox22.Text = S1_CURV_Show.ToString("F1") + "A";
-                    S1_CUR_SET = (ushort)((S1_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-                }
-
-                if (DI_InputRegisters[5] == 1)
-                {
-                    label32.Text = "气泵开";
-                    label32.ForeColor = Color.Lime;
-
-                    double S2_CURV_Show = 1.2; // 基线
-                    double s1Jitter = 0.1 + random.NextDouble() * 0.1; // 0.1~0.3
-                    S2_CURV_Show += (random.Next(0, 2) == 0 ? -1 : 1) * s1Jitter; // 正负随机波动
-                    S2_CURV_Show = Math.Max(0, Math.Min(3.5, S2_CURV_Show));
-
-                    textBox23.Text = S2_CURV_Show.ToString("F1") + "A";
-                    S2_CUR_SET = (ushort)((S2_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-                }
-                else
-                {
-                    label32.Text = "气泵关";
-                    label32.ForeColor = Color.Black;
-                    double S2_CURV_Show = (0);
-                    textBox23.Text = S2_CURV_Show.ToString("F1") + "A";
-                    S2_CUR_SET = (ushort)((S2_CURV_Show / air_pump_sensor_max) * 16000.0 + 4000.0);
-                }
-
                 // 发送 Modbus 请求到后台线程（只写操作放后台）
                 ushort startAddress = 10;
 
@@ -626,11 +562,6 @@ namespace VirtualDriverApp
 
                     P2_FV_SET,
                     N2_FV_SET,
-
-                    S1_CUR_SET,
-                    S1_H2_SET,
-                    S2_CUR_SET,
-                    S2_H2_SET,
                 };
 
                 try
@@ -807,18 +738,6 @@ namespace VirtualDriverApp
 
         private void button5_Click(object sender, EventArgs e)
         {
-            if (button5.Text == "制冷机故障 开启")
-            {
-                button5.Text = "制冷机故障 停止";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 0, 1);
-                button5.BackColor = Color.Red;
-            }
-            else if (button5.Text == "制冷机故障 停止")
-            {
-                button5.Text = "制冷机故障 开启";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 0, 0);
-                button5.BackColor = Color.White;
-            }
         }
 
         // 修改为异步，避免在 UI 线程内同步网络写阻塞
@@ -972,29 +891,6 @@ namespace VirtualDriverApp
                         Console.WriteLine($"其他异常: {ex.Message}");
                     }
                 }
-
-
-                if (DI_InputRegisters[2] == 1)
-                {
-                    label29.Text = "子1负正混液开到位";
-                    label29.ForeColor = Color.Lime;
-                }
-                else
-                {
-                    label29.Text = "子1负正混液关到位";
-                    label29.ForeColor = Color.Red;
-                }
-
-                if (DI_InputRegisters[3] == 1)
-                {
-                    label30.Text = "子2负正混液开到位";
-                    label30.ForeColor = Color.Lime;
-                }
-                else
-                {
-                    label30.Text = "子2负正混液关到位";
-                    label30.ForeColor = Color.Red;
-                }
             }
             catch (Exception exOuter)
             {
@@ -1008,8 +904,6 @@ namespace VirtualDriverApp
 
         private void trackBar4_Scroll(object sender, EventArgs e)
         {
-            S1_H2 = trackBar4.Value;
-            label33.Text = S1_H2.ToString() + "%";
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
@@ -1018,40 +912,14 @@ namespace VirtualDriverApp
 
         private void trackBar1_Scroll_1(object sender, EventArgs e)
         {
-            S2_H2 = trackBar1.Value;
-            label34.Text = S2_H2.ToString() + "%";
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            if (button3.Text == "外部急停 开启")
-            {
-                button3.Text = "外部急停 关闭";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 0);
-                button3.BackColor = Color.Red;
-            }
-            else if (button3.Text == "外部急停 关闭")
-            {
-                button3.Text = "外部急停 开启";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
-                button3.BackColor = Color.White;
-            }
         }
 
         private void button6_Click(object sender, EventArgs e)
-        {
-            if (button6.Text == "水浸故障 开启")
-            {
-                button6.Text = "水浸故障 停止";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 1, 1);
-                button6.BackColor = Color.Red;
-            }
-            else if (button6.Text == "水浸故障 停止")
-            {
-                button6.Text = "水浸故障 开启";
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 1, 0);
-                button6.BackColor = Color.White;
-            }
+        { 
         }
 
         int MAIN_DOOR = 0;
@@ -1059,34 +927,15 @@ namespace VirtualDriverApp
 
         private void button4_Click(object sender, EventArgs e)
         {
-            if (MAIN_DOOR == 0)
-            {
-                MAIN_DOOR = 1;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 1);
-                button4.BackColor = Color.Red;
-            }
-            else if (MAIN_DOOR == 1)
-            {
-                MAIN_DOOR = 0;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 2, 0);
-                button4.BackColor = Color.White;
-            }
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
-            if (POWER_DOOR == 0)
-            {
-                POWER_DOOR = 1;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 3, 1);
-                button7.BackColor = Color.Red;
-            }
-            else if (POWER_DOOR == 1)
-            {
-                POWER_DOOR = 0;
-                WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 3, 0);
-                button7.BackColor = Color.White;
-            }
+        }
+
+        private void pictureBox2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
