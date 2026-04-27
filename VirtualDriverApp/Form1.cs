@@ -35,6 +35,9 @@ namespace VirtualDriverApp
         private ModbusTcpClient DI_ModbusClient;
         private byte DI_ModbusClient_ID = 3;
 
+        private ModbusTcpClient M160T_AI_ModbusClient;
+        private byte M106T_AI_ModbusClient_ID = 1;
+
         // 创建四个从站实例，分别为地址11、22、33、44
         ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
         ModbusRtuSlave slave2 = new ModbusRtuSlave(22);
@@ -177,6 +180,8 @@ namespace VirtualDriverApp
                 AI02_ModbusClient = new ModbusTcpClient();
                 DO_ModbusClient = new ModbusTcpClient();
                 DI_ModbusClient = new ModbusTcpClient();
+                //
+                M160T_AI_ModbusClient = new ModbusTcpClient();
 
                 string selectedPort = comboBox1.SelectedItem?.ToString();
 
@@ -189,7 +194,9 @@ namespace VirtualDriverApp
 
                     DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
                     DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
-
+                    // "192.168.1.100:1502"
+                    M160T_AI_ModbusClient.Connect("127.0.0.1:5021", ModbusEndianness.BigEndian);
+                    // 
                     // comboBox1为变频器端口选择窗
                     // 设置串口配置（打开串口）
                     ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
@@ -449,7 +456,8 @@ namespace VirtualDriverApp
             try
             {
                 double flow_max = 90.0; double flow_min = 0.0;
-                double press_max = 0.20; double press_min = 0.0;
+                //设置压力上限
+                double press_max = 300.0; double press_min = 0.0;
 
                 double Cal_Base = 15.0; // 基准值
 
@@ -463,36 +471,39 @@ namespace VirtualDriverApp
                 double P2_FV_Show = ((P2_Cur / Cal_Base) * (flow_max));
                 double N2_FV_Show = ((N2_Cur / Cal_Base) * (flow_max)) + PN2_FLOW_DIFF;
 
-                textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
-                textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
+                textBox10.Text = P1_PV_Show.ToString("F3") + "kpa";
+                textBox9.Text = N1_PV_Show.ToString("F3") + "kpa";
 
                 LogHelper.Logger.Info("---------------------------------------------");
                 LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
 
-                textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-                textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
+                //textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+                //textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
 
-                LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
+                //LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
 
-                textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
-                textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
+                textBox21.Text = P2_PV_Show.ToString("F3") + "kpa";
+                textBox19.Text = N2_PV_Show.ToString("F3") + "kpa";
 
-                LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+                //LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
 
-                textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-                textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+                //textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+                //textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
 
                 LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
                 LogHelper.Logger.Info("---------------------------------------------");
 
+                // 放大10倍传输出去
+                ushort P1_PV_GIVEN = (ushort)(P1_PV_Show * 10);
+                ushort N1_PV_GIVEN = (ushort)(N1_PV_Show * 10);
+                ushort P2_PV_GIVEN = (ushort)(P2_PV_Show * 10);
+                ushort N2_PV_GIVEN = (ushort)(N2_PV_Show * 10);
+                //
 
                 double air_pump_sensor_max = 3.5;
-
-
-
                 double flow_sensor_max = 90.0;
-                double press_sensor_max = 0.20;
-
+                double press_sensor_max = 300.0;
+#if false
                 ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
                 ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
                 ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
@@ -502,7 +513,7 @@ namespace VirtualDriverApp
                 ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
                 ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
                 ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-
+#endif
                 // 把 DI 读取放到后台线程，并串行化访问，避免在 UI 线程阻塞
                 byte[] diWordArray = null;
                 try
@@ -534,7 +545,7 @@ namespace VirtualDriverApp
                     }
                 }
 
-                if (DI_InputRegisters[1] == 1)
+                if (DI_InputRegisters[7] == 1)
                 {
                     label24.Text = "PCS连锁连接";
                     label24.ForeColor = Color.Lime;
@@ -545,23 +556,94 @@ namespace VirtualDriverApp
                     label24.ForeColor = Color.Red;
                 }
 
+                if (DI_InputRegisters[6] == 1)
+                {
+                    label25.Text = "BAU连锁连接";
+                    label25.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label25.Text = "BAU连锁断开";
+                    label25.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[0] == 1)
+                {
+                    label26.Text = "A容量箱风机开";
+                    label26.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label26.Text = "A容量箱风机关";
+                    label26.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[1] == 1)
+                {
+                    label27.Text = "B容量箱风机开";
+                    label27.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label27.Text = "B容量箱风机关";
+                    label27.ForeColor = Color.Red;
+                }
+
+
+                if (DI_InputRegisters[2] == 1)
+                {
+                    label28.Text = "A侧轴流风机1开";
+                    label28.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label28.Text = "A侧轴流风机1关闭";
+                    label28.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[3] == 1)
+                {
+                    label29.Text = "A侧轴流风机2开";
+                    label29.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label29.Text = "A侧轴流风机2关闭";
+                    label29.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[4] == 1)
+                {
+                    label30.Text = "B侧轴流风机1开";
+                    label30.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label30.Text = "B侧轴流风机1关闭";
+                    label30.ForeColor = Color.Red;
+                }
+
+                if (DI_InputRegisters[5] == 1)
+                {
+                    label31.Text = "B侧轴流风机2开";
+                    label31.ForeColor = Color.Lime;
+                }
+                else
+                {
+                    label31.Text = "B侧轴流风机2关闭";
+                    label31.ForeColor = Color.Red;
+                }
+
 
                 // 发送 Modbus 请求到后台线程（只写操作放后台）
-                ushort startAddress = 10;
+                ushort vstartAddress = 100;
 
-                ushort[] values =
+                ushort[] give_m160t_values =
                 {
-                    P1_PV_SET,
-                    N1_PV_SET,
-
-                    P1_FV_SET,
-                    N1_FV_SET,
-
-                    P2_PV_SET,
-                    N2_PV_SET,
-
-                    P2_FV_SET,
-                    N2_FV_SET,
+                    P1_PV_GIVEN,
+                    N1_PV_GIVEN,
+                    P2_PV_GIVEN,
+                    N2_PV_GIVEN,
                 };
 
                 try
@@ -571,7 +653,7 @@ namespace VirtualDriverApp
                         await _ai01Lock.WaitAsync();
                         try
                         {
-                            AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
+                            M160T_AI_ModbusClient.WriteMultipleRegisters(M106T_AI_ModbusClient_ID, vstartAddress, give_m160t_values);
                         }
                         finally
                         {
