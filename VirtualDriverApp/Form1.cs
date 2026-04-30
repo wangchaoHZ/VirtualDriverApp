@@ -195,7 +195,7 @@ namespace VirtualDriverApp
                     DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
                     DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
                     // "192.168.1.100:1502"
-                    M160T_AI_ModbusClient.Connect("127.0.0.1:5021", ModbusEndianness.BigEndian);
+                    M160T_AI_ModbusClient.Connect("192.168.1.196:5021", ModbusEndianness.BigEndian);
                     // 
                     // comboBox1为变频器端口选择窗
                     // 设置串口配置（打开串口）
