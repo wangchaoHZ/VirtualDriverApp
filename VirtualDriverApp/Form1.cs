@@ -44,6 +44,8 @@ namespace VirtualDriverApp
         ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
         ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
 
+        private double CAL_RATIO;
+
         private double P1_Cur;
         private double N1_Cur;
         private double P2_Cur;
@@ -101,13 +103,15 @@ namespace VirtualDriverApp
             label10.Text = "未启动";
             //textBox9.Clear();
 
-            LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            // LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             //Console.WriteLine("CP")
 
             PN1_PRESS_DIFF = 0.0;
             PN2_PRESS_DIFF = 0.0;
             PN1_FLOW_DIFF = 0.0;
             PN2_FLOW_DIFF = 0.0;
+
+            CAL_RATIO = 0.82;
 
             textBox11.Text = PN1_PRESS_DIFF.ToString("F3");
             textBox12.Text = PN1_FLOW_DIFF.ToString("F2");
@@ -189,8 +193,8 @@ namespace VirtualDriverApp
                 await Task.Run(() =>
                 {
                     // 依次连接"192.168.1.133", "192.168.1.134" "192.168.1.131", "192.168.1.132" 
-                    AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);
-                    AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);
+                    //AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);
+                    //AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);
 
                     DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
                     DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
@@ -233,7 +237,7 @@ namespace VirtualDriverApp
             {
                 label10.ForeColor = Color.Red;
                 label10.Text = "连接失败";
-                LogHelper.Logger.Error(ex, "启动连接失败");
+                // LogHelper.Logger.Error(ex, "启动连接失败");
                 MessageBox.Show($"连接设备失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -471,27 +475,39 @@ namespace VirtualDriverApp
                 double P2_FV_Show = ((P2_Cur / Cal_Base) * (flow_max));
                 double N2_FV_Show = ((N2_Cur / Cal_Base) * (flow_max)) + PN2_FLOW_DIFF;
 
-                textBox10.Text = P1_PV_Show.ToString("F3") + "kpa";
-                textBox9.Text = N1_PV_Show.ToString("F3") + "kpa";
 
-                LogHelper.Logger.Info("---------------------------------------------");
-                LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
+                // 做转换
+                P1_PV_Show = P1_PV_Show * CAL_RATIO;
+                N1_PV_Show = N1_PV_Show * CAL_RATIO;
+                P2_PV_Show = P2_PV_Show * CAL_RATIO;
+                N2_PV_Show = N2_PV_Show * CAL_RATIO;
 
-                //textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
-                //textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
+                P1_FV_Show = 404;
+                N1_FV_Show = P1_FV_Show;
+                P2_FV_Show = P1_FV_Show;
+                N2_FV_Show = P1_FV_Show;
 
-                //LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
+                textBox10.Text = P1_PV_Show.ToString("F1") + "kpa";
+                textBox9.Text  = N1_PV_Show.ToString("F1") + "kpa";
 
-                textBox21.Text = P2_PV_Show.ToString("F3") + "kpa";
-                textBox19.Text = N2_PV_Show.ToString("F3") + "kpa";
+                // LogHelper.Logger.Info("---------------------------------------------");
+                // LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
 
-                //LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+                textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
+                textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
 
-                //textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
-                //textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+                //// LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
 
-                LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
-                LogHelper.Logger.Info("---------------------------------------------");
+                textBox21.Text = P2_PV_Show.ToString("F1") + "kpa";
+                textBox19.Text = N2_PV_Show.ToString("F1") + "kpa";
+
+                //// LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
+
+                textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
+                textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
+
+                // LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
+                // LogHelper.Logger.Info("---------------------------------------------");
 
                 // 放大10倍传输出去
                 ushort P1_PV_GIVEN = (ushort)(P1_PV_Show * 10);
@@ -534,7 +550,7 @@ namespace VirtualDriverApp
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.Logger.Error(ex, "读取 DI 输入寄存器失败");
+                    // LogHelper.Logger.Error(ex, "读取 DI 输入寄存器失败");
                 }
 
                 if (diWordArray != null && diWordArray.Length >= 64)
@@ -674,7 +690,7 @@ namespace VirtualDriverApp
             }
             catch (Exception exOuter)
             {
-                LogHelper.Logger.Error(exOuter, "timer2_Tick 执行异常");
+                // LogHelper.Logger.Error(exOuter, "timer2_Tick 执行异常");
             }
             finally
             {
@@ -976,7 +992,7 @@ namespace VirtualDriverApp
             }
             catch (Exception exOuter)
             {
-                LogHelper.Logger.Error(exOuter, "timer3_Tick 执行异常");
+                // LogHelper.Logger.Error(exOuter, "timer3_Tick 执行异常");
             }
             finally
             {
@@ -1018,6 +1034,20 @@ namespace VirtualDriverApp
         private void pictureBox2_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void textBox22_TextChanged(object sender, EventArgs e)
+        {
+            double value;
+
+            if (double.TryParse(textBox22.Text, out value))
+            {
+                CAL_RATIO = value;
+            }
+            else
+            {
+                CAL_RATIO = 0.9;
+            }
         }
     }
 }
