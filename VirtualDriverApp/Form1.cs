@@ -204,9 +204,9 @@ namespace VirtualDriverApp
                     // comboBox1为变频器端口选择窗
                     // 设置串口配置（打开串口）
                     ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
-                    
-                    if(true)
-                    { 
+
+                    if (true)
+                    {
                         // 稍作延时给串口/设备稳定（后台线程里，不阻塞 UI）
                         Thread.Sleep(250);
                         WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
@@ -283,7 +283,7 @@ namespace VirtualDriverApp
                 slave1.SetHoldingRegister(0x2100, 3);
             }
 
-            if(checkBox13.Checked)
+            if (checkBox13.Checked)
             {
                 // 泵故障
                 slave1.SetHoldingRegister(0x2100, 4);
@@ -488,7 +488,7 @@ namespace VirtualDriverApp
                 N2_FV_Show = P1_FV_Show;
 
                 textBox10.Text = P1_PV_Show.ToString("F1") + "kpa";
-                textBox9.Text  = N1_PV_Show.ToString("F1") + "kpa";
+                textBox9.Text = N1_PV_Show.ToString("F1") + "kpa";
 
                 // LogHelper.Logger.Info("---------------------------------------------");
                 // LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
@@ -1017,7 +1017,7 @@ namespace VirtualDriverApp
         }
 
         private void button6_Click(object sender, EventArgs e)
-        { 
+        {
         }
 
         int MAIN_DOOR = 0;
@@ -1054,46 +1054,76 @@ namespace VirtualDriverApp
 
 public class ModbusRtuSlave
 {
-    private static bool isPortOpen = false;  // 是否已打开串口
-    private static SerialPort serialPort;    // 串口实例
-    private static Dictionary<byte, ModbusRtuSlave> slaveInstances = new Dictionary<byte, ModbusRtuSlave>();  // 存储所有从站实例
+    private static bool isPortOpen = false;                 // 是否已打开串口
+    private static readonly object serialLock = new object(); // 串口读写锁，避免并发读写串口
+    private static readonly object rxLock = new object();     // 接收缓存锁
+    private static SerialPort serialPort;                   // 串口实例
+    private static readonly Dictionary<byte, ModbusRtuSlave> slaveInstances = new Dictionary<byte, ModbusRtuSlave>();
+    private static readonly List<byte> rxBuffer = new List<byte>(256); // RTU接收缓存，用于解决半包/粘包/错位
+    private const int FixedRequestFrameLength = 8;           // 当前只支持03/06，主站请求固定8字节
+    private const int MaxRxBufferLength = 512;               // 防止异常数据无限堆积
 
-    private byte slaveAddress;
-    private ushort[] holdingRegisters;
+    private static readonly object randomLock = new object();
+    private static readonly Random sharedRandom = new Random();
 
-    private float currentFrequency = 0;  // 当前频率，单位Hz
-    private const float maxFrequency = 6000.0f;  // 最大频率，单位Hz
-    private const float maxCurrent = 1500.0f;  // 最大电流，单位A
-    private float targetFrequency = 0;  // 目标频率，单位Hz
+    private readonly object dataLock = new object();         // 寄存器/频率/电流数据锁
+    private readonly byte slaveAddress;
+    private readonly ushort[] holdingRegisters;
+
+    private float currentFrequency = 0;                      // 当前频率，原程序按寄存器值保存：6000代表60.00Hz
+    private const float maxFrequency = 6000.0f;              // 最大频率寄存器值
+    private const float maxCurrent = 1500.0f;                // 最大电流寄存器值，1500代表15.00A
+    private float targetFrequency = 0;                       // 目标频率寄存器值
+    private bool frequencyTaskRunning = false;               // 每个泵只允许一个频率渐变任务运行
 
     private ushort final_current = 0;
-
     private string response_log = "";
 
     // 静态构造函数，初始化串口
     static ModbusRtuSlave()
     {
-        // 串口未打开时初始化
         serialPort = new SerialPort();
-        serialPort.DataReceived += SerialPort_DataReceived; // 注册 DataReceived 事件
+        serialPort.DataReceived += SerialPort_DataReceived;
     }
 
     // 设置串口参数的接口，外部调用此方法设置串口
     public static void SetSerialPortSettings(string portName = "COM3", int baudRate = 9600, Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One)
     {
-        if (!isPortOpen)
+        lock (serialLock)
         {
-            serialPort.PortName = portName;
-            serialPort.BaudRate = baudRate;
-            serialPort.Parity = parity;
-            serialPort.DataBits = dataBits;
-            serialPort.StopBits = stopBits;
-            serialPort.Open();
-            isPortOpen = true;  // 标记串口已打开
-        }
-        else
-        {
-            Console.WriteLine("串口已经打开，无法更改设置。");
+            if (!isPortOpen)
+            {
+                if (string.IsNullOrWhiteSpace(portName))
+                {
+                    throw new ArgumentException("串口名称为空，请先选择有效串口。", nameof(portName));
+                }
+
+                serialPort.PortName = portName;
+                serialPort.BaudRate = baudRate;
+                serialPort.Parity = parity;
+                serialPort.DataBits = dataBits;
+                serialPort.StopBits = stopBits;
+                serialPort.ReadTimeout = 200;
+                serialPort.WriteTimeout = 200;
+                serialPort.ReceivedBytesThreshold = 1;
+                serialPort.ReadBufferSize = 4096;
+                serialPort.WriteBufferSize = 4096;
+
+                serialPort.Open();
+                serialPort.DiscardInBuffer();
+                serialPort.DiscardOutBuffer();
+
+                lock (rxLock)
+                {
+                    rxBuffer.Clear();
+                }
+
+                isPortOpen = true;
+            }
+            else
+            {
+                Console.WriteLine("串口已经打开，无法更改设置。");
+            }
         }
     }
 
@@ -1101,158 +1131,258 @@ public class ModbusRtuSlave
     public ModbusRtuSlave(byte slaveAddress)
     {
         this.slaveAddress = slaveAddress;
-        this.holdingRegisters = new ushort[0x3010];  // 默认有 100 个寄存器
-        this.currentFrequency = 0;  // 初始化频率为 0Hz
-        slaveInstances[slaveAddress] = this;
+        this.holdingRegisters = new ushort[0x3010];
+        this.currentFrequency = 0;
+
+        lock (slaveInstances)
+        {
+            slaveInstances[slaveAddress] = this;
+        }
     }
 
-    // 启动 Modbus RTU 从站（只启动一个串口线程）
+    // 启动 Modbus RTU 从站
     public static void Start()
     {
-        // 启动 Modbus 处理线程（注意，这里没有使用 Thread.Sleep）
         Console.WriteLine("Modbus RTU Slave started...");
     }
 
-    // 设置保持寄存器值（包括频率的目标值）
+    // 设置保持寄存器值（包括频率目标值）
     public void SetHoldingRegister(ushort address, ushort value)
     {
-        Console.WriteLine("Setting Addr:" + address.ToString());
-        if (address == 0x2001)  // 设置频率值
+        bool needStartFrequencyTask = false;
+
+        lock (dataLock)
+        {
+            if (address >= holdingRegisters.Length)
+            {
+                Console.WriteLine($"SetHoldingRegister invalid address: 0x{address:X4}");
+                return;
+            }
+
+            holdingRegisters[address] = value;
+
+            if (address == 0x2001) // 设置频率值
+            {
+                targetFrequency = value;
+
+                if (!frequencyTaskRunning)
+                {
+                    frequencyTaskRunning = true;
+                    needStartFrequencyTask = true;
+                }
+            }
+        }
+
+        if (address == 0x2001)
         {
             Console.WriteLine("Setting Target Frequency:" + value.ToString());
-            this.targetFrequency = value;  // 设置目标频率
-            Task.Run(() => GradualFrequencyChange());  // 启动频率逐步变化的任务
         }
-        else
+
+        if (needStartFrequencyTask)
         {
-            // 设置其他寄存器值的逻辑
-            holdingRegisters[address] = value;
+            Task.Run(() => FrequencyWorkerLoop());
         }
     }
 
     public ushort GetHoldingRegister(ushort address)
     {
-        return holdingRegisters[address];
+        lock (dataLock)
+        {
+            if (address >= holdingRegisters.Length)
+            {
+                return 0;
+            }
+
+            return holdingRegisters[address];
+        }
     }
 
     public string GetCurentLogString()
     {
-        return response_log;
+        lock (dataLock)
+        {
+            return response_log;
+        }
     }
 
-    // 逐步变化频率（模拟真实场景）
-    private void GradualFrequencyChange()
+    // 单任务频率渐变：主站频繁写0x2001时，只更新targetFrequency，不重复创建任务
+    private async Task FrequencyWorkerLoop()
     {
-        float startFrequency = currentFrequency;
-        float changeDuration = 1.0f;
-
-        float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
-
-        // 逐步变化频率
-        for (float t = 0; t < changeDuration; t += 0.2f) // 每 0.1 秒变化一次
+        try
         {
-            currentFrequency = startFrequency + frequencyChangeRate * t;
-            Console.WriteLine($"Current Frequency: {currentFrequency:F2} Hz");
+            while (true)
+            {
+                float cur;
+                float target;
 
-            // 在 Modbus 保持寄存器地址 0x3000 返回频率值（模拟返回）
-            holdingRegisters[0x3000] = (ushort)currentFrequency;
-            holdingRegisters[0x3004] = (ushort)this.GetCurrent();
+                lock (dataLock)
+                {
+                    cur = currentFrequency;
+                    target = targetFrequency;
+                }
 
-            // 模拟每 0.1 秒的时间间隔
-            Task.Delay(88).Wait();
+                float diff = target - cur;
+
+                if (Math.Abs(diff) <= 1.0f)
+                {
+                    lock (dataLock)
+                    {
+                        currentFrequency = targetFrequency;
+                        UpdateFrequencyAndCurrentRegistersLocked();
+
+                        // 如果锁内确认已经到达最新目标，则结束任务
+                        if (Math.Abs(targetFrequency - currentFrequency) <= 1.0f)
+                        {
+                            frequencyTaskRunning = false;
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    // 每100ms向目标靠近一部分，避免一次跳变；同时不会因为频繁写目标而启动多个任务
+                    float step = diff * 0.25f;
+
+                    // 防止极小步进导致长时间不收敛
+                    if (Math.Abs(step) < 1.0f)
+                    {
+                        step = Math.Sign(diff) * 1.0f;
+                    }
+
+                    lock (dataLock)
+                    {
+                        currentFrequency += step;
+
+                        if (currentFrequency < 0)
+                        {
+                            currentFrequency = 0;
+                        }
+                        else if (currentFrequency > maxFrequency)
+                        {
+                            currentFrequency = maxFrequency;
+                        }
+
+                        UpdateFrequencyAndCurrentRegistersLocked();
+                    }
+                }
+
+                await Task.Delay(100);
+            }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine("FrequencyWorkerLoop exception: " + ex.Message);
+            lock (dataLock)
+            {
+                frequencyTaskRunning = false;
+            }
+        }
+    }
 
-        // 确保最终频率与目标频率一致
-        currentFrequency = targetFrequency;
+    private void UpdateFrequencyAndCurrentRegistersLocked()
+    {
+        ushort freq = (ushort)Math.Max(0, Math.Min(maxFrequency, currentFrequency));
+        ushort cur = (ushort)Math.Max(0, Math.Min(ushort.MaxValue, GetCurrentLocked()));
 
-        holdingRegisters[0x3000] = (ushort)currentFrequency;
-        holdingRegisters[0x3004] = (ushort)this.GetCurrent();
-
-        final_current = (ushort)this.GetCurrent();
-
-        Console.WriteLine($"Final Frequency: {currentFrequency:F2} Hz");
-        Console.WriteLine($"Final Current: {currentFrequency:F2} A");
+        holdingRegisters[0x3000] = freq;
+        holdingRegisters[0x3004] = cur;
+        final_current = cur;
     }
 
     // 获取当前频率
     public float GetFrequency()
     {
-        return currentFrequency;
+        lock (dataLock)
+        {
+            return currentFrequency;
+        }
     }
 
     // 获取当前电流
     public float GetCurrent()
     {
-        Random random = new Random();
-        // 生成一个在 -50 到 50 之间的随机数
-        int randomNumber = random.Next(1, 6);
-        // 计算电流，最大频率 60Hz 对应最大电流 15A
-        return (currentFrequency / maxFrequency) * maxCurrent + (float)(randomNumber);
+        lock (dataLock)
+        {
+            return GetCurrentLocked();
+        }
+    }
+
+    private float GetCurrentLocked()
+    {
+        int randomNumber;
+        lock (randomLock)
+        {
+            randomNumber = sharedRandom.Next(1, 6);
+        }
+
+        return (currentFrequency / maxFrequency) * maxCurrent + randomNumber;
     }
 
     public ushort GetFinalCurrent()
     {
-        return final_current;
+        lock (dataLock)
+        {
+            return final_current;
+        }
     }
 
-    // DataReceived 事件处理方法
+    // DataReceived事件：只负责读取当前可用字节，放入缓存，再从缓存中解析完整RTU帧
     private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
     {
         try
         {
-            // 检查串口是否已打开
-            if (!serialPort.IsOpen)
+            if (serialPort == null || !serialPort.IsOpen)
             {
                 Console.WriteLine("Serial port is not open.");
                 return;
             }
 
-            // 确保串口缓冲区有足够的数据
-            int bytesToRead = serialPort.BytesToRead;
-            if (bytesToRead < 8)
+            byte[] incoming;
+
+            lock (serialLock)
             {
-                Console.WriteLine($"Not enough data available. Expected 8 bytes, got {bytesToRead} bytes.");
-                return;
+                int bytesToRead = serialPort.BytesToRead;
+                if (bytesToRead <= 0)
+                {
+                    return;
+                }
+
+                incoming = new byte[bytesToRead];
+                int readLen = serialPort.Read(incoming, 0, incoming.Length);
+
+                if (readLen <= 0)
+                {
+                    return;
+                }
+
+                if (readLen != incoming.Length)
+                {
+                    Array.Resize(ref incoming, readLen);
+                }
             }
 
-            byte[] request = new byte[8];
-            serialPort.Read(request, 0, 8);  // 从串口读取8字节数据
+            List<byte[]> framesToProcess;
 
-            // 打印接收到的字节数据
-            Console.WriteLine("Received Data: " + BitConverter.ToString(request));
-
-            byte slaveAddress = request[0];  // 获取请求中的从站地址
-
-            if (slaveInstances.ContainsKey(slaveAddress))  // 如果字典中有该从站实例
+            lock (rxLock)
             {
-                var slave = slaveInstances[slaveAddress];  // 获取对应的从站实例
-                byte functionCode = request[1];  // 功能码
-                byte[] response = null;
+                rxBuffer.AddRange(incoming);
 
-                // 处理 Modbus 读保持寄存器请求（功能码 0x03）
-                if (functionCode == 0x03)
+                if (rxBuffer.Count > MaxRxBufferLength)
                 {
-                    ushort startingAddress = (ushort)((request[2] << 8) + request[3]);
-                    ushort quantity = (ushort)((request[4] << 8) + request[5]);
-
-                    // 处理该从站的保持寄存器读取请求
-                    response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
-                }
-                // 处理 Modbus 写单个寄存器请求（功能码 0x06）
-                else if (functionCode == 0x06)
-                {
-                    ushort registerAddress = (ushort)((request[2] << 8) + request[3]);
-                    ushort registerValue = (ushort)((request[4] << 8) + request[5]);
-
-                    // 处理写单个寄存器
-                    response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
+                    // 异常情况下防止缓存无限增长，保留最后7字节用于半包续接
+                    int keep = Math.Min(FixedRequestFrameLength - 1, rxBuffer.Count);
+                    byte[] tail = rxBuffer.Skip(rxBuffer.Count - keep).ToArray();
+                    rxBuffer.Clear();
+                    rxBuffer.AddRange(tail);
+                    Console.WriteLine("RTU rxBuffer overflow, buffer trimmed.");
                 }
 
-                if (response != null)
-                {
-                    serialPort.Write(response, 0, response.Length);
-                    Console.WriteLine("Sent response: " + BitConverter.ToString(response));
-                }
+                framesToProcess = ExtractCompleteFramesLocked();
+            }
+
+            foreach (byte[] request in framesToProcess)
+            {
+                ProcessRequestFrame(request);
             }
         }
         catch (IOException ioEx)
@@ -1265,89 +1395,229 @@ public class ModbusRtuSlave
         }
     }
 
-    // 处理读保持寄存器（功能码 0x03）
+    // 从接收缓存中提取完整03/06请求帧，解决半包、粘包、错位问题
+    private static List<byte[]> ExtractCompleteFramesLocked()
+    {
+        List<byte[]> frames = new List<byte[]>();
+
+        while (rxBuffer.Count >= FixedRequestFrameLength)
+        {
+            byte[] first8 = rxBuffer.Take(FixedRequestFrameLength).ToArray();
+
+            if (IsSupportedFixedRequestFrame(first8))
+            {
+                frames.Add(first8);
+                rxBuffer.RemoveRange(0, FixedRequestFrameLength);
+                continue;
+            }
+
+            // 当前头不对，尝试在缓存中寻找下一个合法帧头，避免因为残留字节导致永久错位
+            int nextStart = FindNextSupportedFrameStartLocked();
+
+            if (nextStart > 0)
+            {
+                rxBuffer.RemoveRange(0, nextStart);
+                continue;
+            }
+
+            if (nextStart == 0)
+            {
+                // 理论上不会走到这里，因为first8前面已经判断过
+                continue;
+            }
+
+            // 当前缓存里找不到完整合法帧。保留最后7字节，等待后续字节拼成完整帧。
+            if (rxBuffer.Count > FixedRequestFrameLength - 1)
+            {
+                int keep = FixedRequestFrameLength - 1;
+                byte[] tail = rxBuffer.Skip(rxBuffer.Count - keep).ToArray();
+                rxBuffer.Clear();
+                rxBuffer.AddRange(tail);
+            }
+
+            break;
+        }
+
+        return frames;
+    }
+
+    private static int FindNextSupportedFrameStartLocked()
+    {
+        for (int i = 1; i <= rxBuffer.Count - FixedRequestFrameLength; i++)
+        {
+            byte[] candidate = rxBuffer.Skip(i).Take(FixedRequestFrameLength).ToArray();
+            if (IsSupportedFixedRequestFrame(candidate))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool IsSupportedFixedRequestFrame(byte[] frame)
+    {
+        if (frame == null || frame.Length != FixedRequestFrameLength)
+        {
+            return false;
+        }
+
+        byte functionCode = frame[1];
+
+        // 本程序按你的要求只支持03和06，不增加0x10
+        if (functionCode != 0x03 && functionCode != 0x06)
+        {
+            return false;
+        }
+
+        return ValidateCRC(frame);
+    }
+
+    private static void ProcessRequestFrame(byte[] request)
+    {
+        Console.WriteLine("Received Data: " + BitConverter.ToString(request));
+
+        if (!ValidateCRC(request))
+        {
+            Console.WriteLine("Request CRC mismatch, frame dropped.");
+            return;
+        }
+
+        byte addr = request[0];
+        byte functionCode = request[1];
+
+        ModbusRtuSlave slave;
+        lock (slaveInstances)
+        {
+            if (!slaveInstances.TryGetValue(addr, out slave))
+            {
+                // 不是本模拟器地址，不响应
+                Console.WriteLine($"Ignore frame for slave address: {addr}");
+                return;
+            }
+        }
+
+        byte[] response = null;
+
+        if (functionCode == 0x03)
+        {
+            ushort startingAddress = (ushort)((request[2] << 8) | request[3]);
+            ushort quantity = (ushort)((request[4] << 8) | request[5]);
+            response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
+        }
+        else if (functionCode == 0x06)
+        {
+            ushort registerAddress = (ushort)((request[2] << 8) | request[3]);
+            ushort registerValue = (ushort)((request[4] << 8) | request[5]);
+            response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
+        }
+
+        if (response != null)
+        {
+            lock (serialLock)
+            {
+                if (serialPort != null && serialPort.IsOpen)
+                {
+                    serialPort.Write(response, 0, response.Length);
+                }
+            }
+
+            Console.WriteLine("Sent response: " + BitConverter.ToString(response));
+        }
+    }
+
+    // 处理读保持寄存器（功能码0x03）
     private byte[] HandleReadHoldingRegisters(ushort startingAddress, ushort quantity)
     {
-        if (startingAddress >= holdingRegisters.Length || startingAddress + quantity > holdingRegisters.Length)
+        if (quantity == 0 || quantity > 125)
+        {
+            Console.WriteLine("Invalid register quantity.");
+            SetResponseLog("Read Holding Registers invalid quantity!");
+            return BuildExceptionResponse(0x03, 0x03); // Illegal Data Value
+        }
+
+        int start = startingAddress;
+        int end = start + quantity;
+
+        if (start < 0 || end > holdingRegisters.Length)
         {
             Console.WriteLine("Invalid register range.");
-            return null;  // 无效的寄存器地址范围
+            SetResponseLog("Read Holding Registers invalid range!");
+            return BuildExceptionResponse(0x03, 0x02); // Illegal Data Address
         }
 
-        byte[] response = new byte[5 + 2 * quantity]; // 响应长度：功能码 + 字节数 + 寄存器数据
+        byte[] response = new byte[5 + 2 * quantity];
 
-        response[0] = slaveAddress;  // 从站地址
-        response[1] = 0x03;  // 功能码（0x03：读取保持寄存器）  
-        response[2] = (byte)(2 * quantity); // 数据字节数（每个寄存器 2 字节）
+        response[0] = slaveAddress;
+        response[1] = 0x03;
+        response[2] = (byte)(2 * quantity);
 
-        // 写入寄存器值
-        for (int i = 0; i < quantity; i++)
+        lock (dataLock)
         {
-            ushort registerValue = holdingRegisters[startingAddress + (ushort)i];
-            response[3 + 2 * i] = (byte)(registerValue >> 8);  // 高字节
-            response[4 + 2 * i] = (byte)(registerValue & 0xFF);  // 低字节
+            for (int i = 0; i < quantity; i++)
+            {
+                ushort registerValue = holdingRegisters[startingAddress + i];
+                response[3 + 2 * i] = (byte)(registerValue >> 8);
+                response[4 + 2 * i] = (byte)(registerValue & 0xFF);
+            }
         }
 
-        // 校验（CRC 检查）
-        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
-        response[response.Length - 2] = crc[0];
-        response[response.Length - 1] = crc[1];
-
-        // 比较计算出的 CRC 和接收到的 CRC 是否一致
-        if (!ValidateCRC(response))
-        {
-            Console.WriteLine("CRC mismatch!");
-            this.response_log = "Read Holding Registers CRC mismatch!";
-            return null;  // CRC 不匹配时返回 null
-        }
-
+        AppendCRC(response);
         return response;
     }
 
-    // 处理写单个保持寄存器（功能码 0x06）
+    // 处理写单个保持寄存器（功能码0x06）
     private byte[] HandleWriteSingleRegister(ushort registerAddress, ushort registerValue)
     {
         if (registerAddress >= holdingRegisters.Length)
         {
             Console.WriteLine("Invalid register address.");
-            return null;  // 无效的寄存器地址
-        }
-
-        // 更新寄存器值
-        holdingRegisters[registerAddress] = registerValue;
-
-        byte[] response = new byte[8]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
-
-        response[0] = slaveAddress;  // 从站地址
-        response[1] = 0x06;  // 功能码（0x06：写单个寄存器）
-        response[2] = (byte)(registerAddress >> 8);  // 寄存器地址高字节
-        response[3] = (byte)(registerAddress & 0xFF);  // 寄存器地址低字节
-        Console.WriteLine(">>registerValue:" + registerValue.ToString());
-        response[4] = (byte)(registerValue >> 8);  // 寄存器值高字节
-        Console.WriteLine(">>response[4]:" + response[4].ToString());
-        response[5] = (byte)(registerValue & 0xFF);  // 寄存器值低字节
-        Console.WriteLine(">>response[5]:" + response[5].ToString());
-
-        // 校验（CRC 检查）
-        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
-        response[response.Length - 2] = crc[0];
-        response[response.Length - 1] = crc[1];
-
-        // 比较计算出的 CRC 和接收到的 CRC 是否一致
-        if (!ValidateCRC(response))
-        {
-            Console.WriteLine("CRC mismatch!");
-            this.response_log = "Write Single Register CRC mismatch!";
-            return null;  // CRC 不匹配时返回 null
+            SetResponseLog("Write Single Register invalid address!");
+            return BuildExceptionResponse(0x06, 0x02); // Illegal Data Address
         }
 
         SetHoldingRegister(registerAddress, registerValue);
 
+        byte[] response = new byte[8];
+
+        response[0] = slaveAddress;
+        response[1] = 0x06;
+        response[2] = (byte)(registerAddress >> 8);
+        response[3] = (byte)(registerAddress & 0xFF);
+        response[4] = (byte)(registerValue >> 8);
+        response[5] = (byte)(registerValue & 0xFF);
+
+        AppendCRC(response);
         return response;
     }
 
-    // CRC 校验方法（假设使用的是 Modbus CRC16）
-    private byte[] CalculateCRC(byte[] data)
+    private byte[] BuildExceptionResponse(byte functionCode, byte exceptionCode)
+    {
+        byte[] response = new byte[5];
+        response[0] = slaveAddress;
+        response[1] = (byte)(functionCode | 0x80);
+        response[2] = exceptionCode;
+        AppendCRC(response);
+        return response;
+    }
+
+    private void SetResponseLog(string log)
+    {
+        lock (dataLock)
+        {
+            response_log = log;
+        }
+    }
+
+    private static void AppendCRC(byte[] frame)
+    {
+        byte[] crc = CalculateCRC(frame.Take(frame.Length - 2).ToArray());
+        frame[frame.Length - 2] = crc[0];
+        frame[frame.Length - 1] = crc[1];
+    }
+
+    // CRC校验方法，Modbus CRC16，返回低字节在前
+    private static byte[] CalculateCRC(byte[] data)
     {
         ushort crc = 0xFFFF;
 
@@ -1372,19 +1642,20 @@ public class ModbusRtuSlave
         return new byte[] { (byte)(crc & 0xFF), (byte)((crc >> 8) & 0xFF) };
     }
 
-    // 校验计算出来的 CRC 是否和响应中的 CRC 一致
-    private bool ValidateCRC(byte[] response)
+    // 校验整帧CRC，frame最后2字节应为CRC低字节、高字节
+    private static bool ValidateCRC(byte[] frame)
     {
-        // 提取响应中存储的 CRC 值
-        byte[] receivedCRC = new byte[] { response[response.Length - 2], response[response.Length - 1] };
+        if (frame == null || frame.Length < 4)
+        {
+            return false;
+        }
 
-        // 计算实际的 CRC 值
-        byte[] calculatedCRC = CalculateCRC(response.Take(response.Length - 2).ToArray());
-
-        // 比较计算出的 CRC 和响应中的 CRC
+        byte[] receivedCRC = new byte[] { frame[frame.Length - 2], frame[frame.Length - 1] };
+        byte[] calculatedCRC = CalculateCRC(frame.Take(frame.Length - 2).ToArray());
         return receivedCRC.SequenceEqual(calculatedCRC);
     }
 }
+
 
 namespace Modbus
 {
