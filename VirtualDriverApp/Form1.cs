@@ -2,6 +2,7 @@
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Ports;
@@ -228,8 +229,6 @@ namespace VirtualDriverApp
 
         private ushort[] DI_InputRegisters = new ushort[32];
 
-        private static Random random = new Random();  // 随机数生成器
-
         // 新增：用于串行化各 Modbus 客户端的访问，避免并发与潜在死锁
         private readonly SemaphoreSlim _ai01Lock = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _diLock = new SemaphoreSlim(1, 1);
@@ -375,156 +374,56 @@ namespace VirtualDriverApp
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            if (slave1.GetFinalCurrent() > 100)
-            {
-                ushort rv = (ushort)(slave1.GetFinalCurrent() + random.Next(0, 11));
+            ApplyCurrentFault(slave1, checkBox1.Checked, checkBox2.Checked);
+            ApplyCurrentFault(slave2, checkBox4.Checked, checkBox3.Checked);
+            ApplyCurrentFault(slave3, checkBox6.Checked, checkBox5.Checked);
+            ApplyCurrentFault(slave4, checkBox8.Checked, checkBox7.Checked);
 
-                if (checkBox1.Checked || checkBox2.Checked)
-                {
-                    if (checkBox1.Checked)
-                    {
-                        slave1.SetHoldingRegister(0x3004, 3000);
-                    }
-                    else
-                    {
-                        slave1.SetHoldingRegister(0x3004, 30);
-                    }
-                }
-                else
-                {
-                    slave1.SetHoldingRegister(0x3004, rv);
-                }
-            }
-            else
-            {
-                slave1.SetHoldingRegister(0x2100, 3);
-            }
+            SetPumpFaultState(slave1, checkBox13.Checked);
+            SetPumpFaultState(slave2, checkBox14.Checked);
+            SetPumpFaultState(slave3, checkBox15.Checked);
+            SetPumpFaultState(slave4, checkBox16.Checked);
 
-            if(checkBox13.Checked)
+            P1_Cur = UpdatePumpDisplay(slave1, textBox1, textBox2, textBox15);
+            N1_Cur = UpdatePumpDisplay(slave2, textBox4, textBox3, textBox22);
+            P2_Cur = UpdatePumpDisplay(slave3, textBox8, textBox7, textBox23);
+            N2_Cur = UpdatePumpDisplay(slave4, textBox6, textBox5, textBox24);
+        }
+
+        private static void ApplyCurrentFault(
+            ModbusRtuSlave slave,
+            bool highCurrentFault,
+            bool lowCurrentFault)
+        {
+            double? currentOverride = null;
+            if (highCurrentFault)
             {
-                // 泵故障
-                slave1.SetHoldingRegister(0x2100, 4);
+                currentOverride = 30.0;
             }
-            else
+            else if (lowCurrentFault)
             {
-                // 泵正常
-                slave1.SetHoldingRegister(0x2100, 1);
+                currentOverride = 0.3;
             }
 
-            if (slave2.GetFinalCurrent() > 100)
-            {
-                ushort rv = (ushort)(slave2.GetFinalCurrent() + random.Next(0, 11));
+            slave.SetCurrentOverride(currentOverride);
+        }
 
-                if (checkBox4.Checked || checkBox3.Checked)
-                {
-                    if (checkBox4.Checked)
-                    {
-                        slave2.SetHoldingRegister(0x3004, 3000);
+        private static void SetPumpFaultState(ModbusRtuSlave slave, bool hasFault)
+        {
+            slave.SetHoldingRegister(0x2100, hasFault ? (ushort)4 : (ushort)1);
+        }
 
-                    }
-                    else
-                    {
-                        slave2.SetHoldingRegister(0x3004, 30);
-                    }
-                }
-                else
-                {
-                    slave2.SetHoldingRegister(0x3004, rv);
-                }
-            }
-
-            if (checkBox14.Checked)
-            {
-                // 泵故障
-                slave2.SetHoldingRegister(0x2100, 4);
-            }
-            else
-            {
-                // 泵正常
-                slave2.SetHoldingRegister(0x2100, 1);
-            }
-
-            if (slave3.GetFinalCurrent() > 100)
-            {
-                ushort rv = (ushort)(slave3.GetFinalCurrent() + random.Next(0, 11));
-
-                if (checkBox6.Checked || checkBox5.Checked)
-                {
-                    if (checkBox6.Checked)
-                    {
-                        slave3.SetHoldingRegister(0x3004, 3000);
-                    }
-                    else
-                    {
-                        slave3.SetHoldingRegister(0x3004, 30);
-                    }
-                }
-                else
-                {
-                    slave3.SetHoldingRegister(0x3004, rv);
-                }
-            }
-
-            if (checkBox15.Checked)
-            {
-                // 泵故障
-                slave3.SetHoldingRegister(0x2100, 4);
-            }
-            else
-            {
-                // 泵正常
-                slave3.SetHoldingRegister(0x2100, 1);
-            }
-
-            if (slave4.GetFinalCurrent() > 100)
-            {
-                ushort rv = (ushort)(slave4.GetFinalCurrent() + random.Next(10, 16));
-
-
-                if (checkBox8.Checked || checkBox7.Checked)
-                {
-                    if (checkBox8.Checked)
-                    {
-                        slave4.SetHoldingRegister(0x3004, 3000);
-                    }
-                    else
-                    {
-                        slave4.SetHoldingRegister(0x3004, 30);
-                    }
-                }
-                else
-                {
-                    slave4.SetHoldingRegister(0x3004, rv);
-                }
-            }
-
-            if (checkBox16.Checked)
-            {
-                // 泵故障
-                slave4.SetHoldingRegister(0x2100, 4);
-            }
-            else
-            {
-                // 泵正常
-                slave4.SetHoldingRegister(0x2100, 1);
-            }
-
-            textBox1.Text = ((double)slave1.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
-            textBox2.Text = ((double)slave1.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
-            P1_Cur = (double)slave1.GetHoldingRegister(0x3004) / 100.0;
-
-            textBox4.Text = ((double)slave2.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
-            textBox3.Text = ((double)slave2.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
-            N1_Cur = (double)slave2.GetHoldingRegister(0x3004) / 100.0;
-
-            textBox8.Text = ((double)slave3.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
-            textBox7.Text = ((double)slave3.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
-            P2_Cur = (double)slave3.GetHoldingRegister(0x3004) / 100.0;
-
-            textBox6.Text = ((double)slave4.GetHoldingRegister(0x3000) / 100.0).ToString("F2") + " HZ";
-            textBox5.Text = ((double)slave4.GetHoldingRegister(0x3004) / 100.0).ToString("F2") + " A";
-            N2_Cur = (double)slave4.GetHoldingRegister(0x3004) / 100.0;
-
+        private static double UpdatePumpDisplay(
+            ModbusRtuSlave slave,
+            TextBox frequencyTextBox,
+            TextBox currentTextBox,
+            TextBox energyTextBox)
+        {
+            ModbusRtuSlave.PumpSnapshot snapshot = slave.GetSnapshot();
+            frequencyTextBox.Text = snapshot.FrequencyHz.ToString("F2") + " HZ";
+            currentTextBox.Text = snapshot.CurrentA.ToString("F2") + " A";
+            energyTextBox.Text = snapshot.AccumulatedEnergyKwh.ToString("F3") + " kWh";
+            return snapshot.CurrentA;
         }
         private void button2_Click(object sender, EventArgs e)
         {
@@ -970,19 +869,48 @@ namespace VirtualDriverApp
 
 public class ModbusRtuSlave
 {
-    private static bool isPortOpen = false;  // 是否已打开串口
-    private static SerialPort serialPort;    // 串口实例
-    private static Dictionary<byte, ModbusRtuSlave> slaveInstances = new Dictionary<byte, ModbusRtuSlave>();  // 存储所有从站实例
+    private const double RegisterScale = 100.0;
+    private const double MaximumFrequencyHz = 60.0;
+    private const double RampRateHzPerSecond = 2.5;
+    private const double PowerKilowattsPerAmp = 0.42500269603871194;
+    private const double RunningFrequencyThresholdHz = 0.5;
 
-    private byte slaveAddress;
-    private ushort[] holdingRegisters;
+    private static bool isPortOpen;
+    private static SerialPort serialPort;
+    private static readonly Dictionary<byte, ModbusRtuSlave> slaveInstances =
+        new Dictionary<byte, ModbusRtuSlave>();
 
-    private float currentFrequency = 0;  // 当前频率，单位Hz
-    private const float maxFrequency = 6000.0f;  // 最大频率，单位Hz
-    private const float maxCurrent = 1500.0f;  // 最大电流，单位A
-    private float targetFrequency = 0;  // 目标频率，单位Hz
+    private readonly object stateLock = new object();
+    private readonly Stopwatch simulationClock = Stopwatch.StartNew();
+    private readonly Random random;
+    private readonly byte slaveAddress;
+    private readonly ushort[] holdingRegisters;
 
-    private ushort final_current = 0;
+    private readonly double currentQuadraticCoefficient;
+    private readonly double currentLinearCoefficient;
+    private readonly double currentConstantCoefficient;
+
+    private double lastSimulationSeconds;
+    private double currentFrequencyHz;
+    private double targetFrequencyHz;
+    private double simulatedCurrentA;
+    private double currentNoiseA;
+    private double instantaneousPowerKw;
+    private double accumulatedEnergyKwh;
+    private double? currentOverrideA;
+
+    public sealed class PumpSnapshot
+    {
+        public double FrequencyHz { get; internal set; }
+
+        public double TargetFrequencyHz { get; internal set; }
+
+        public double CurrentA { get; internal set; }
+
+        public double InstantaneousPowerKw { get; internal set; }
+
+        public double AccumulatedEnergyKwh { get; internal set; }
+    }
 
     // 静态构造函数，初始化串口
     static ModbusRtuSlave()
@@ -1015,9 +943,45 @@ public class ModbusRtuSlave
     public ModbusRtuSlave(byte slaveAddress)
     {
         this.slaveAddress = slaveAddress;
-        this.holdingRegisters = new ushort[0x3010];  // 默认有 100 个寄存器
-        this.currentFrequency = 0;  // 初始化频率为 0Hz
-        slaveInstances[slaveAddress] = this;
+        holdingRegisters = new ushort[0x3010];
+        random = new Random(Environment.TickCount ^ (slaveAddress << 16));
+
+        switch (slaveAddress)
+        {
+            case 11:
+                currentQuadraticCoefficient = 0.005063652281299397;
+                currentLinearCoefficient = -0.05049377264325327;
+                currentConstantCoefficient = 5.72586487089944;
+                break;
+            case 22:
+                currentQuadraticCoefficient = 0.004814660602610448;
+                currentLinearCoefficient = -0.030112118746925126;
+                currentConstantCoefficient = 5.922344660623048;
+                break;
+            case 33:
+                currentQuadraticCoefficient = 0.005129481141858832;
+                currentLinearCoefficient = -0.047392561760144405;
+                currentConstantCoefficient = 5.9362718966768675;
+                break;
+            case 44:
+                currentQuadraticCoefficient = 0.004907373916841373;
+                currentLinearCoefficient = -0.03910113450718124;
+                currentConstantCoefficient = 6.053938877833055;
+                break;
+            default:
+                currentQuadraticCoefficient = 0.004978792;
+                currentLinearCoefficient = -0.041774;
+                currentConstantCoefficient = 5.909355;
+                break;
+        }
+
+        holdingRegisters[0x2100] = 1;
+        lastSimulationSeconds = simulationClock.Elapsed.TotalSeconds;
+
+        lock (slaveInstances)
+        {
+            slaveInstances[slaveAddress] = this;
+        }
     }
 
     // 启动 Modbus RTU 从站（只启动一个串口线程）
@@ -1027,75 +991,225 @@ public class ModbusRtuSlave
         Console.WriteLine("Modbus RTU Slave started...");
     }
 
-    // 设置保持寄存器值（包括频率的目标值）
+    // 频率命令寄存器使用 0.01 Hz，模拟输出寄存器使用 0.01 Hz / 0.01 A。
     public void SetHoldingRegister(ushort address, ushort value)
     {
-        Console.WriteLine("Setting Addr:" + address.ToString());
-        if (address == 0x2001)  // 设置频率值
+        if (address >= holdingRegisters.Length)
         {
-            Console.WriteLine("Setting Target Frequency:" + value.ToString());
-            this.targetFrequency = value;  // 设置目标频率
-            Task.Run(() => GradualFrequencyChange());  // 启动频率逐步变化的任务
+            throw new ArgumentOutOfRangeException(nameof(address));
         }
-        else
+
+        UpdateSimulation();
+
+        lock (stateLock)
         {
-            // 设置其他寄存器值的逻辑
-            holdingRegisters[address] = value;
+            if (address == 0x2001)
+            {
+                targetFrequencyHz = Math.Max(
+                    0.0,
+                    Math.Min(MaximumFrequencyHz, value / RegisterScale));
+                holdingRegisters[address] = ToRegisterValue(
+                    targetFrequencyHz,
+                    RegisterScale);
+            }
+            else
+            {
+                holdingRegisters[address] = value;
+            }
         }
     }
 
     public ushort GetHoldingRegister(ushort address)
     {
-        return holdingRegisters[address];
-    }
-
-    // 逐步变化频率（模拟真实场景）
-    private void GradualFrequencyChange()
-    {
-        float startFrequency = currentFrequency;
-        float changeDuration = 1.0f;
-
-        float frequencyChangeRate = (targetFrequency - startFrequency) / changeDuration; // 每秒变化频率
-
-        // 逐步变化频率
-        for (float t = 0; t < changeDuration; t += 0.2f) // 每 0.1 秒变化一次
+        if (address >= holdingRegisters.Length)
         {
-            currentFrequency = startFrequency + frequencyChangeRate * t;
-            Console.WriteLine($"Current Frequency: {currentFrequency:F2} Hz");
-
-            // 在 Modbus 保持寄存器地址 0x3000 返回频率值（模拟返回）
-            holdingRegisters[0x3000] = (ushort)currentFrequency;
-            holdingRegisters[0x3004] = (ushort)this.GetCurrent();
-
-            // 模拟每 0.1 秒的时间间隔
-            Task.Delay(88).Wait();
+            throw new ArgumentOutOfRangeException(nameof(address));
         }
 
-        // 确保最终频率与目标频率一致
-        currentFrequency = targetFrequency;
-
-        holdingRegisters[0x3000] = (ushort)currentFrequency;
-        holdingRegisters[0x3004] = (ushort)this.GetCurrent();
-
-        final_current = (ushort)this.GetCurrent();
-
-        Console.WriteLine($"Final Frequency: {currentFrequency:F2} Hz");
-        Console.WriteLine($"Final Current: {currentFrequency:F2} A");
+        UpdateSimulation();
+        lock (stateLock)
+        {
+            return holdingRegisters[address];
+        }
     }
 
-    // 获取当前电流
+    public void SetCurrentOverride(double? currentA)
+    {
+        UpdateSimulation();
+        lock (stateLock)
+        {
+            currentOverrideA = currentA.HasValue
+                ? Math.Max(0.0, Math.Min(100.0, currentA.Value))
+                : (double?)null;
+            UpdateOutputRegistersUnsafe();
+        }
+    }
+
+    public PumpSnapshot GetSnapshot()
+    {
+        UpdateSimulation();
+        lock (stateLock)
+        {
+            return new PumpSnapshot
+            {
+                FrequencyHz = currentFrequencyHz,
+                TargetFrequencyHz = targetFrequencyHz,
+                CurrentA = simulatedCurrentA,
+                InstantaneousPowerKw = instantaneousPowerKw,
+                AccumulatedEnergyKwh = accumulatedEnergyKwh
+            };
+        }
+    }
+
     public float GetCurrent()
     {
-        Random random = new Random();
-        // 生成一个在 -50 到 50 之间的随机数
-        int randomNumber = random.Next(1, 6);
-        // 计算电流，最大频率 60Hz 对应最大电流 15A
-        return (currentFrequency / maxFrequency) * maxCurrent + (float)(randomNumber);
+        return (float)GetSnapshot().CurrentA;
     }
 
     public ushort GetFinalCurrent()
     {
-        return final_current;
+        return ToRegisterValue(GetSnapshot().CurrentA, RegisterScale);
+    }
+
+    public double GetAccumulatedEnergyKwh()
+    {
+        return GetSnapshot().AccumulatedEnergyKwh;
+    }
+
+    private void UpdateSimulation()
+    {
+        double nowSeconds = simulationClock.Elapsed.TotalSeconds;
+
+        lock (stateLock)
+        {
+            double elapsedSeconds = nowSeconds - lastSimulationSeconds;
+            if (elapsedSeconds <= 0)
+            {
+                return;
+            }
+
+            double frequencyDifference = targetFrequencyHz - currentFrequencyHz;
+            double rampDurationSeconds = Math.Min(
+                elapsedSeconds,
+                Math.Abs(frequencyDifference) / RampRateHzPerSecond);
+            double rampDirection = Math.Sign(frequencyDifference);
+            double startFrequencyHz = currentFrequencyHz;
+            double endFrequencyHz = startFrequencyHz +
+                rampDirection * RampRateHzPerSecond * rampDurationSeconds;
+
+            if (Math.Abs(targetFrequencyHz - endFrequencyHz) < 0.0001)
+            {
+                endFrequencyHz = targetFrequencyHz;
+            }
+
+            double endPowerKw = CalculateBasePowerKw(endFrequencyHz);
+            double rampEnergyKwh = CalculateRampEnergyKwh(
+                startFrequencyHz,
+                endFrequencyHz);
+            double steadyEnergyKwh =
+                endPowerKw *
+                (elapsedSeconds - rampDurationSeconds) / 3600.0;
+
+            accumulatedEnergyKwh += rampEnergyKwh + steadyEnergyKwh;
+            currentFrequencyHz = endFrequencyHz;
+            instantaneousPowerKw = endPowerKw;
+            lastSimulationSeconds = nowSeconds;
+
+            if (currentFrequencyHz >= RunningFrequencyThresholdHz)
+            {
+                double newNoiseA = (random.NextDouble() * 2.0 - 1.0) * 0.18;
+                double smoothingFactor =
+                    1.0 - Math.Exp(-elapsedSeconds / 1.5);
+                currentNoiseA =
+                    currentNoiseA * (1.0 - smoothingFactor) +
+                    newNoiseA * smoothingFactor;
+            }
+            else
+            {
+                currentNoiseA = 0.0;
+            }
+
+            UpdateOutputRegistersUnsafe();
+        }
+    }
+
+    private void UpdateOutputRegistersUnsafe()
+    {
+        double baseCurrentA = CalculateBaseCurrentA(currentFrequencyHz);
+        double measuredCurrentA = baseCurrentA + currentNoiseA;
+
+        if (currentFrequencyHz < RunningFrequencyThresholdHz)
+        {
+            measuredCurrentA = 0.0;
+        }
+        else if (currentOverrideA.HasValue)
+        {
+            measuredCurrentA = currentOverrideA.Value;
+        }
+
+        simulatedCurrentA = Math.Max(0.0, measuredCurrentA);
+        holdingRegisters[0x3000] = ToRegisterValue(
+            currentFrequencyHz,
+            RegisterScale);
+        holdingRegisters[0x3004] = ToRegisterValue(
+            simulatedCurrentA,
+            RegisterScale);
+    }
+
+    private double CalculateBaseCurrentA(double frequencyHz)
+    {
+        if (frequencyHz < RunningFrequencyThresholdHz)
+        {
+            return 0.0;
+        }
+
+        double currentA =
+            currentQuadraticCoefficient * frequencyHz * frequencyHz +
+            currentLinearCoefficient * frequencyHz +
+            currentConstantCoefficient;
+
+        return Math.Max(0.0, Math.Min(30.0, currentA));
+    }
+
+    private double CalculateBasePowerKw(double frequencyHz)
+    {
+        return CalculateBaseCurrentA(frequencyHz) * PowerKilowattsPerAmp;
+    }
+
+    private double CalculateRampEnergyKwh(
+        double startFrequencyHz,
+        double endFrequencyHz)
+    {
+        double lowerFrequencyHz = Math.Max(
+            RunningFrequencyThresholdHz,
+            Math.Min(startFrequencyHz, endFrequencyHz));
+        double upperFrequencyHz = Math.Max(
+            RunningFrequencyThresholdHz,
+            Math.Max(startFrequencyHz, endFrequencyHz));
+
+        if (upperFrequencyHz <= lowerFrequencyHz)
+        {
+            return 0.0;
+        }
+
+        double integratedCurrentAmpHz =
+            currentQuadraticCoefficient / 3.0 *
+                (Math.Pow(upperFrequencyHz, 3) - Math.Pow(lowerFrequencyHz, 3)) +
+            currentLinearCoefficient / 2.0 *
+                (Math.Pow(upperFrequencyHz, 2) - Math.Pow(lowerFrequencyHz, 2)) +
+            currentConstantCoefficient *
+                (upperFrequencyHz - lowerFrequencyHz);
+
+        return integratedCurrentAmpHz * PowerKilowattsPerAmp /
+            RampRateHzPerSecond / 3600.0;
+    }
+
+    private static ushort ToRegisterValue(double value, double scale)
+    {
+        double scaledValue = Math.Round(value * scale);
+        return (ushort)Math.Max(
+            ushort.MinValue,
+            Math.Min(ushort.MaxValue, scaledValue));
     }
 
     // DataReceived 事件处理方法
@@ -1126,9 +1240,14 @@ public class ModbusRtuSlave
 
             byte slaveAddress = request[0];  // 获取请求中的从站地址
 
-            if (slaveInstances.ContainsKey(slaveAddress))  // 如果字典中有该从站实例
+            ModbusRtuSlave slave;
+            lock (slaveInstances)
             {
-                var slave = slaveInstances[slaveAddress];  // 获取对应的从站实例
+                slaveInstances.TryGetValue(slaveAddress, out slave);
+            }
+
+            if (slave != null)
+            {
                 byte functionCode = request[1];  // 功能码
                 byte[] response = null;
 
@@ -1171,39 +1290,44 @@ public class ModbusRtuSlave
     // 处理读保持寄存器（功能码 0x03）
     private byte[] HandleReadHoldingRegisters(ushort startingAddress, ushort quantity)
     {
-        if (startingAddress >= holdingRegisters.Length || startingAddress + quantity > holdingRegisters.Length)
+        UpdateSimulation();
+
+        lock (stateLock)
         {
-            Console.WriteLine("Invalid register range.");
-            return null;  // 无效的寄存器地址范围
+            if (startingAddress >= holdingRegisters.Length || startingAddress + quantity > holdingRegisters.Length)
+            {
+                Console.WriteLine("Invalid register range.");
+                return null;  // 无效的寄存器地址范围
+            }
+
+            byte[] response = new byte[5 + 2 * quantity]; // 响应长度：功能码 + 字节数 + 寄存器数据
+
+            response[0] = slaveAddress;  // 从站地址
+            response[1] = 0x03;  // 功能码（0x03：读取保持寄存器）
+            response[2] = (byte)(2 * quantity); // 数据字节数（每个寄存器 2 字节）
+
+            // 写入寄存器值
+            for (int i = 0; i < quantity; i++)
+            {
+                ushort registerValue = holdingRegisters[startingAddress + (ushort)i];
+                response[3 + 2 * i] = (byte)(registerValue >> 8);  // 高字节
+                response[4 + 2 * i] = (byte)(registerValue & 0xFF);  // 低字节
+            }
+
+            // 校验（CRC 检查）
+            byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
+            response[response.Length - 2] = crc[0];
+            response[response.Length - 1] = crc[1];
+
+            // 比较计算出的 CRC 和接收到的 CRC 是否一致
+            if (!ValidateCRC(response))
+            {
+                Console.WriteLine("CRC mismatch!");
+                return null;  // CRC 不匹配时返回 null
+            }
+
+            return response;
         }
-
-        byte[] response = new byte[5 + 2 * quantity]; // 响应长度：功能码 + 字节数 + 寄存器数据
-
-        response[0] = slaveAddress;  // 从站地址
-        response[1] = 0x03;  // 功能码（0x03：读取保持寄存器）  
-        response[2] = (byte)(2 * quantity); // 数据字节数（每个寄存器 2 字节）
-
-        // 写入寄存器值
-        for (int i = 0; i < quantity; i++)
-        {
-            ushort registerValue = holdingRegisters[startingAddress + (ushort)i];
-            response[3 + 2 * i] = (byte)(registerValue >> 8);  // 高字节
-            response[4 + 2 * i] = (byte)(registerValue & 0xFF);  // 低字节
-        }
-
-        // 校验（CRC 检查）
-        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
-        response[response.Length - 2] = crc[0];
-        response[response.Length - 1] = crc[1];
-
-        // 比较计算出的 CRC 和接收到的 CRC 是否一致
-        if (!ValidateCRC(response))
-        {
-            Console.WriteLine("CRC mismatch!");
-            return null;  // CRC 不匹配时返回 null
-        }
-
-        return response;
     }
 
     // 处理写单个保持寄存器（功能码 0x06）
@@ -1214,9 +1338,6 @@ public class ModbusRtuSlave
             Console.WriteLine("Invalid register address.");
             return null;  // 无效的寄存器地址
         }
-
-        // 更新寄存器值
-        holdingRegisters[registerAddress] = registerValue;
 
         byte[] response = new byte[8]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
 

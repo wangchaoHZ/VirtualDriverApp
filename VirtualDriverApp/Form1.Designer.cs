@@ -34,6 +34,8 @@
             this.button1 = new System.Windows.Forms.Button();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label24 = new System.Windows.Forms.Label();
+            this.textBox15 = new System.Windows.Forms.TextBox();
             this.checkBox13 = new System.Windows.Forms.CheckBox();
             this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
@@ -41,6 +43,8 @@
             this.textBox2 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.label25 = new System.Windows.Forms.Label();
+            this.textBox22 = new System.Windows.Forms.TextBox();
             this.checkBox14 = new System.Windows.Forms.CheckBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label3 = new System.Windows.Forms.Label();
@@ -49,6 +53,8 @@
             this.label4 = new System.Windows.Forms.Label();
             this.textBox4 = new System.Windows.Forms.TextBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label27 = new System.Windows.Forms.Label();
+            this.textBox24 = new System.Windows.Forms.TextBox();
             this.checkBox16 = new System.Windows.Forms.CheckBox();
             this.checkBox7 = new System.Windows.Forms.CheckBox();
             this.label5 = new System.Windows.Forms.Label();
@@ -57,6 +63,8 @@
             this.label6 = new System.Windows.Forms.Label();
             this.textBox6 = new System.Windows.Forms.TextBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.label26 = new System.Windows.Forms.Label();
+            this.textBox23 = new System.Windows.Forms.TextBox();
             this.checkBox15 = new System.Windows.Forms.CheckBox();
             this.checkBox5 = new System.Windows.Forms.CheckBox();
             this.label7 = new System.Windows.Forms.Label();
@@ -101,14 +109,6 @@
             this.textBox20 = new System.Windows.Forms.TextBox();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.timer3 = new System.Windows.Forms.Timer(this.components);
-            this.label24 = new System.Windows.Forms.Label();
-            this.textBox15 = new System.Windows.Forms.TextBox();
-            this.label25 = new System.Windows.Forms.Label();
-            this.textBox22 = new System.Windows.Forms.TextBox();
-            this.label26 = new System.Windows.Forms.Label();
-            this.textBox23 = new System.Windows.Forms.TextBox();
-            this.label27 = new System.Windows.Forms.Label();
-            this.textBox24 = new System.Windows.Forms.TextBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -123,7 +123,7 @@
             this.textBox1.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox1.ForeColor = System.Drawing.Color.Lime;
             this.textBox1.Location = new System.Drawing.Point(65, 119);
-            this.textBox1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox1.Margin = new System.Windows.Forms.Padding(5);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(308, 72);
@@ -136,7 +136,7 @@
             this.button1.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button1.ForeColor = System.Drawing.Color.Black;
             this.button1.Location = new System.Drawing.Point(2008, 285);
-            this.button1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.button1.Margin = new System.Windows.Forms.Padding(5);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(445, 86);
             this.button1.TabIndex = 5;
@@ -163,20 +163,44 @@
             this.groupBox1.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.groupBox1.ForeColor = System.Drawing.Color.Black;
             this.groupBox1.Location = new System.Drawing.Point(20, 191);
-            this.groupBox1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(5);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Padding = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(5);
             this.groupBox1.Size = new System.Drawing.Size(445, 589);
             this.groupBox1.TabIndex = 6;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "P1（ADDR：11）";
+            // 
+            // label24
+            // 
+            this.label24.AutoSize = true;
+            this.label24.Location = new System.Drawing.Point(64, 360);
+            this.label24.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label24.Name = "label24";
+            this.label24.Size = new System.Drawing.Size(214, 31);
+            this.label24.TabIndex = 72;
+            this.label24.Text = "累计功耗（kWh）";
+            // 
+            // textBox15
+            // 
+            this.textBox15.BackColor = System.Drawing.Color.Black;
+            this.textBox15.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox15.ForeColor = System.Drawing.Color.Lime;
+            this.textBox15.Location = new System.Drawing.Point(65, 406);
+            this.textBox15.Margin = new System.Windows.Forms.Padding(5);
+            this.textBox15.Multiline = true;
+            this.textBox15.Name = "textBox15";
+            this.textBox15.Size = new System.Drawing.Size(308, 72);
+            this.textBox15.TabIndex = 71;
+            this.textBox15.Text = "0.000 kWh";
+            this.textBox15.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // checkBox13
             // 
             this.checkBox13.AutoSize = true;
             this.checkBox13.ForeColor = System.Drawing.Color.Black;
             this.checkBox13.Location = new System.Drawing.Point(286, 525);
-            this.checkBox13.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox13.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox13.Name = "checkBox13";
             this.checkBox13.Size = new System.Drawing.Size(74, 35);
             this.checkBox13.TabIndex = 70;
@@ -188,7 +212,7 @@
             this.checkBox2.AutoSize = true;
             this.checkBox2.ForeColor = System.Drawing.Color.Black;
             this.checkBox2.Location = new System.Drawing.Point(179, 525);
-            this.checkBox2.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox2.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox2.Name = "checkBox2";
             this.checkBox2.Size = new System.Drawing.Size(83, 35);
             this.checkBox2.TabIndex = 12;
@@ -200,7 +224,7 @@
             this.checkBox1.AutoSize = true;
             this.checkBox1.ForeColor = System.Drawing.Color.Black;
             this.checkBox1.Location = new System.Drawing.Point(65, 525);
-            this.checkBox1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox1.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(88, 35);
             this.checkBox1.TabIndex = 11;
@@ -223,7 +247,7 @@
             this.textBox2.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox2.ForeColor = System.Drawing.Color.Lime;
             this.textBox2.Location = new System.Drawing.Point(65, 258);
-            this.textBox2.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox2.Margin = new System.Windows.Forms.Padding(5);
             this.textBox2.Multiline = true;
             this.textBox2.Name = "textBox2";
             this.textBox2.Size = new System.Drawing.Size(308, 72);
@@ -255,20 +279,44 @@
             this.groupBox2.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.groupBox2.ForeColor = System.Drawing.Color.Black;
             this.groupBox2.Location = new System.Drawing.Point(520, 191);
-            this.groupBox2.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox2.Margin = new System.Windows.Forms.Padding(5);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Padding = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox2.Padding = new System.Windows.Forms.Padding(5);
             this.groupBox2.Size = new System.Drawing.Size(445, 589);
             this.groupBox2.TabIndex = 7;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "N1（ADDR：22）";
+            // 
+            // label25
+            // 
+            this.label25.AutoSize = true;
+            this.label25.Location = new System.Drawing.Point(60, 360);
+            this.label25.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label25.Name = "label25";
+            this.label25.Size = new System.Drawing.Size(214, 31);
+            this.label25.TabIndex = 73;
+            this.label25.Text = "累计功耗（kWh）";
+            // 
+            // textBox22
+            // 
+            this.textBox22.BackColor = System.Drawing.Color.Black;
+            this.textBox22.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox22.ForeColor = System.Drawing.Color.Lime;
+            this.textBox22.Location = new System.Drawing.Point(61, 406);
+            this.textBox22.Margin = new System.Windows.Forms.Padding(5);
+            this.textBox22.Multiline = true;
+            this.textBox22.Name = "textBox22";
+            this.textBox22.Size = new System.Drawing.Size(308, 72);
+            this.textBox22.TabIndex = 72;
+            this.textBox22.Text = "0.000 kWh";
+            this.textBox22.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // checkBox14
             // 
             this.checkBox14.AutoSize = true;
             this.checkBox14.ForeColor = System.Drawing.Color.Black;
             this.checkBox14.Location = new System.Drawing.Point(285, 525);
-            this.checkBox14.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox14.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox14.Name = "checkBox14";
             this.checkBox14.Size = new System.Drawing.Size(74, 35);
             this.checkBox14.TabIndex = 71;
@@ -280,7 +328,7 @@
             this.checkBox3.AutoSize = true;
             this.checkBox3.ForeColor = System.Drawing.Color.Black;
             this.checkBox3.Location = new System.Drawing.Point(181, 525);
-            this.checkBox3.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox3.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(83, 35);
             this.checkBox3.TabIndex = 14;
@@ -302,7 +350,7 @@
             this.checkBox4.AutoSize = true;
             this.checkBox4.ForeColor = System.Drawing.Color.Black;
             this.checkBox4.Location = new System.Drawing.Point(71, 525);
-            this.checkBox4.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox4.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox4.Name = "checkBox4";
             this.checkBox4.Size = new System.Drawing.Size(88, 35);
             this.checkBox4.TabIndex = 13;
@@ -315,7 +363,7 @@
             this.textBox3.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox3.ForeColor = System.Drawing.Color.Lime;
             this.textBox3.Location = new System.Drawing.Point(61, 258);
-            this.textBox3.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox3.Margin = new System.Windows.Forms.Padding(5);
             this.textBox3.Multiline = true;
             this.textBox3.Name = "textBox3";
             this.textBox3.Size = new System.Drawing.Size(308, 72);
@@ -339,7 +387,7 @@
             this.textBox4.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox4.ForeColor = System.Drawing.Color.Lime;
             this.textBox4.Location = new System.Drawing.Point(61, 119);
-            this.textBox4.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox4.Margin = new System.Windows.Forms.Padding(5);
             this.textBox4.Multiline = true;
             this.textBox4.Name = "textBox4";
             this.textBox4.Size = new System.Drawing.Size(308, 72);
@@ -361,20 +409,44 @@
             this.groupBox3.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.groupBox3.ForeColor = System.Drawing.Color.Black;
             this.groupBox3.Location = new System.Drawing.Point(1520, 191);
-            this.groupBox3.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox3.Margin = new System.Windows.Forms.Padding(5);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Padding = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox3.Padding = new System.Windows.Forms.Padding(5);
             this.groupBox3.Size = new System.Drawing.Size(456, 589);
             this.groupBox3.TabIndex = 9;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "N2（ADDR：44）";
+            // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Location = new System.Drawing.Point(60, 360);
+            this.label27.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(214, 31);
+            this.label27.TabIndex = 75;
+            this.label27.Text = "累计功耗（kWh）";
+            // 
+            // textBox24
+            // 
+            this.textBox24.BackColor = System.Drawing.Color.Black;
+            this.textBox24.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox24.ForeColor = System.Drawing.Color.Lime;
+            this.textBox24.Location = new System.Drawing.Point(61, 406);
+            this.textBox24.Margin = new System.Windows.Forms.Padding(5);
+            this.textBox24.Multiline = true;
+            this.textBox24.Name = "textBox24";
+            this.textBox24.Size = new System.Drawing.Size(308, 72);
+            this.textBox24.TabIndex = 74;
+            this.textBox24.Text = "0.000 kWh";
+            this.textBox24.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // checkBox16
             // 
             this.checkBox16.AutoSize = true;
             this.checkBox16.ForeColor = System.Drawing.Color.Black;
             this.checkBox16.Location = new System.Drawing.Point(288, 525);
-            this.checkBox16.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox16.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox16.Name = "checkBox16";
             this.checkBox16.Size = new System.Drawing.Size(74, 35);
             this.checkBox16.TabIndex = 73;
@@ -386,7 +458,7 @@
             this.checkBox7.AutoSize = true;
             this.checkBox7.ForeColor = System.Drawing.Color.Black;
             this.checkBox7.Location = new System.Drawing.Point(182, 525);
-            this.checkBox7.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox7.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox7.Name = "checkBox7";
             this.checkBox7.Size = new System.Drawing.Size(83, 35);
             this.checkBox7.TabIndex = 14;
@@ -408,7 +480,7 @@
             this.checkBox8.AutoSize = true;
             this.checkBox8.ForeColor = System.Drawing.Color.Black;
             this.checkBox8.Location = new System.Drawing.Point(71, 525);
-            this.checkBox8.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox8.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox8.Name = "checkBox8";
             this.checkBox8.Size = new System.Drawing.Size(88, 35);
             this.checkBox8.TabIndex = 13;
@@ -421,7 +493,7 @@
             this.textBox5.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox5.ForeColor = System.Drawing.Color.Lime;
             this.textBox5.Location = new System.Drawing.Point(61, 258);
-            this.textBox5.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox5.Margin = new System.Windows.Forms.Padding(5);
             this.textBox5.Multiline = true;
             this.textBox5.Name = "textBox5";
             this.textBox5.Size = new System.Drawing.Size(308, 72);
@@ -445,7 +517,7 @@
             this.textBox6.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox6.ForeColor = System.Drawing.Color.Lime;
             this.textBox6.Location = new System.Drawing.Point(61, 119);
-            this.textBox6.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox6.Margin = new System.Windows.Forms.Padding(5);
             this.textBox6.Multiline = true;
             this.textBox6.Name = "textBox6";
             this.textBox6.Size = new System.Drawing.Size(308, 72);
@@ -467,20 +539,44 @@
             this.groupBox4.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.groupBox4.ForeColor = System.Drawing.Color.Black;
             this.groupBox4.Location = new System.Drawing.Point(1020, 191);
-            this.groupBox4.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox4.Margin = new System.Windows.Forms.Padding(5);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Padding = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.groupBox4.Padding = new System.Windows.Forms.Padding(5);
             this.groupBox4.Size = new System.Drawing.Size(445, 589);
             this.groupBox4.TabIndex = 8;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "P2（ADDR：33）";
+            // 
+            // label26
+            // 
+            this.label26.AutoSize = true;
+            this.label26.Location = new System.Drawing.Point(65, 360);
+            this.label26.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label26.Name = "label26";
+            this.label26.Size = new System.Drawing.Size(214, 31);
+            this.label26.TabIndex = 74;
+            this.label26.Text = "累计功耗（kWh）";
+            // 
+            // textBox23
+            // 
+            this.textBox23.BackColor = System.Drawing.Color.Black;
+            this.textBox23.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox23.ForeColor = System.Drawing.Color.Lime;
+            this.textBox23.Location = new System.Drawing.Point(66, 406);
+            this.textBox23.Margin = new System.Windows.Forms.Padding(5);
+            this.textBox23.Multiline = true;
+            this.textBox23.Name = "textBox23";
+            this.textBox23.Size = new System.Drawing.Size(308, 72);
+            this.textBox23.TabIndex = 73;
+            this.textBox23.Text = "0.000 kWh";
+            this.textBox23.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // checkBox15
             // 
             this.checkBox15.AutoSize = true;
             this.checkBox15.ForeColor = System.Drawing.Color.Black;
             this.checkBox15.Location = new System.Drawing.Point(294, 525);
-            this.checkBox15.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox15.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox15.Name = "checkBox15";
             this.checkBox15.Size = new System.Drawing.Size(74, 35);
             this.checkBox15.TabIndex = 72;
@@ -492,7 +588,7 @@
             this.checkBox5.AutoSize = true;
             this.checkBox5.ForeColor = System.Drawing.Color.Black;
             this.checkBox5.Location = new System.Drawing.Point(182, 525);
-            this.checkBox5.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox5.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox5.Name = "checkBox5";
             this.checkBox5.Size = new System.Drawing.Size(83, 35);
             this.checkBox5.TabIndex = 14;
@@ -514,7 +610,7 @@
             this.checkBox6.AutoSize = true;
             this.checkBox6.ForeColor = System.Drawing.Color.Black;
             this.checkBox6.Location = new System.Drawing.Point(65, 525);
-            this.checkBox6.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.checkBox6.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox6.Name = "checkBox6";
             this.checkBox6.Size = new System.Drawing.Size(88, 35);
             this.checkBox6.TabIndex = 13;
@@ -527,7 +623,7 @@
             this.textBox7.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox7.ForeColor = System.Drawing.Color.Lime;
             this.textBox7.Location = new System.Drawing.Point(66, 258);
-            this.textBox7.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox7.Margin = new System.Windows.Forms.Padding(5);
             this.textBox7.Multiline = true;
             this.textBox7.Name = "textBox7";
             this.textBox7.Size = new System.Drawing.Size(308, 72);
@@ -551,7 +647,7 @@
             this.textBox8.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.textBox8.ForeColor = System.Drawing.Color.Lime;
             this.textBox8.Location = new System.Drawing.Point(66, 119);
-            this.textBox8.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox8.Margin = new System.Windows.Forms.Padding(5);
             this.textBox8.Multiline = true;
             this.textBox8.Name = "textBox8";
             this.textBox8.Size = new System.Drawing.Size(308, 72);
@@ -576,7 +672,7 @@
             this.label10.AutoSize = true;
             this.label10.Font = new System.Drawing.Font("微软雅黑", 21.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.label10.Location = new System.Drawing.Point(2066, 60);
+            this.label10.Location = new System.Drawing.Point(1656, 58);
             this.label10.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(158, 50);
@@ -588,7 +684,7 @@
             this.button2.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button2.ForeColor = System.Drawing.Color.Black;
             this.button2.Location = new System.Drawing.Point(2008, 381);
-            this.button2.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.button2.Margin = new System.Windows.Forms.Padding(5);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(445, 86);
             this.button2.TabIndex = 12;
@@ -600,7 +696,7 @@
             // 
             this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
             this.pictureBox1.Location = new System.Drawing.Point(20, 36);
-            this.pictureBox1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.pictureBox1.Margin = new System.Windows.Forms.Padding(5);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(400, 110);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
@@ -614,7 +710,7 @@
             this.comboBox1.ForeColor = System.Drawing.Color.Black;
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Location = new System.Drawing.Point(2214, 220);
-            this.comboBox1.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.comboBox1.Margin = new System.Windows.Forms.Padding(5);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(229, 32);
             this.comboBox1.TabIndex = 15;
@@ -648,7 +744,7 @@
             this.textBox10.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox10.ForeColor = System.Drawing.Color.Lime;
             this.textBox10.Location = new System.Drawing.Point(41, 112);
-            this.textBox10.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox10.Margin = new System.Windows.Forms.Padding(5);
             this.textBox10.Multiline = true;
             this.textBox10.Name = "textBox10";
             this.textBox10.Size = new System.Drawing.Size(308, 72);
@@ -673,7 +769,7 @@
             this.textBox9.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox9.ForeColor = System.Drawing.Color.Lime;
             this.textBox9.Location = new System.Drawing.Point(41, 261);
-            this.textBox9.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox9.Margin = new System.Windows.Forms.Padding(5);
             this.textBox9.Multiline = true;
             this.textBox9.Name = "textBox9";
             this.textBox9.Size = new System.Drawing.Size(308, 72);
@@ -698,7 +794,7 @@
             this.textBox11.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox11.ForeColor = System.Drawing.Color.Lime;
             this.textBox11.Location = new System.Drawing.Point(41, 418);
-            this.textBox11.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox11.Margin = new System.Windows.Forms.Padding(5);
             this.textBox11.Multiline = true;
             this.textBox11.Name = "textBox11";
             this.textBox11.Size = new System.Drawing.Size(308, 72);
@@ -724,7 +820,7 @@
             this.textBox12.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox12.ForeColor = System.Drawing.Color.Lime;
             this.textBox12.Location = new System.Drawing.Point(561, 418);
-            this.textBox12.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox12.Margin = new System.Windows.Forms.Padding(5);
             this.textBox12.Multiline = true;
             this.textBox12.Name = "textBox12";
             this.textBox12.Size = new System.Drawing.Size(308, 72);
@@ -750,7 +846,7 @@
             this.textBox13.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox13.ForeColor = System.Drawing.Color.Lime;
             this.textBox13.Location = new System.Drawing.Point(561, 261);
-            this.textBox13.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox13.Margin = new System.Windows.Forms.Padding(5);
             this.textBox13.Multiline = true;
             this.textBox13.Name = "textBox13";
             this.textBox13.Size = new System.Drawing.Size(308, 72);
@@ -775,7 +871,7 @@
             this.textBox14.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox14.ForeColor = System.Drawing.Color.Lime;
             this.textBox14.Location = new System.Drawing.Point(561, 112);
-            this.textBox14.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox14.Margin = new System.Windows.Forms.Padding(5);
             this.textBox14.Multiline = true;
             this.textBox14.Name = "textBox14";
             this.textBox14.Size = new System.Drawing.Size(308, 72);
@@ -829,7 +925,7 @@
             this.checkBox12.BackColor = System.Drawing.Color.Transparent;
             this.checkBox12.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.checkBox12.Location = new System.Drawing.Point(1879, 439);
-            this.checkBox12.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkBox12.Margin = new System.Windows.Forms.Padding(4);
             this.checkBox12.Name = "checkBox12";
             this.checkBox12.Size = new System.Drawing.Size(54, 31);
             this.checkBox12.TabIndex = 48;
@@ -841,7 +937,7 @@
             this.checkBox11.AutoSize = true;
             this.checkBox11.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.checkBox11.Location = new System.Drawing.Point(1372, 439);
-            this.checkBox11.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkBox11.Margin = new System.Windows.Forms.Padding(4);
             this.checkBox11.Name = "checkBox11";
             this.checkBox11.Size = new System.Drawing.Size(54, 31);
             this.checkBox11.TabIndex = 47;
@@ -853,7 +949,7 @@
             this.checkBox10.AutoSize = true;
             this.checkBox10.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.checkBox10.Location = new System.Drawing.Point(879, 439);
-            this.checkBox10.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkBox10.Margin = new System.Windows.Forms.Padding(4);
             this.checkBox10.Name = "checkBox10";
             this.checkBox10.Size = new System.Drawing.Size(54, 31);
             this.checkBox10.TabIndex = 46;
@@ -866,7 +962,7 @@
             this.checkBox9.AutoSize = true;
             this.checkBox9.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.checkBox9.Location = new System.Drawing.Point(359, 439);
-            this.checkBox9.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkBox9.Margin = new System.Windows.Forms.Padding(4);
             this.checkBox9.Name = "checkBox9";
             this.checkBox9.Size = new System.Drawing.Size(54, 31);
             this.checkBox9.TabIndex = 45;
@@ -880,7 +976,7 @@
             this.textBox21.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox21.ForeColor = System.Drawing.Color.Lime;
             this.textBox21.Location = new System.Drawing.Point(1055, 112);
-            this.textBox21.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox21.Margin = new System.Windows.Forms.Padding(5);
             this.textBox21.Multiline = true;
             this.textBox21.Name = "textBox21";
             this.textBox21.Size = new System.Drawing.Size(308, 72);
@@ -916,7 +1012,7 @@
             this.textBox16.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox16.ForeColor = System.Drawing.Color.Lime;
             this.textBox16.Location = new System.Drawing.Point(1561, 112);
-            this.textBox16.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox16.Margin = new System.Windows.Forms.Padding(5);
             this.textBox16.Multiline = true;
             this.textBox16.Name = "textBox16";
             this.textBox16.Size = new System.Drawing.Size(308, 72);
@@ -930,7 +1026,7 @@
             this.textBox17.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox17.ForeColor = System.Drawing.Color.Lime;
             this.textBox17.Location = new System.Drawing.Point(1055, 418);
-            this.textBox17.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox17.Margin = new System.Windows.Forms.Padding(5);
             this.textBox17.Multiline = true;
             this.textBox17.Name = "textBox17";
             this.textBox17.Size = new System.Drawing.Size(308, 72);
@@ -989,7 +1085,7 @@
             this.textBox18.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox18.ForeColor = System.Drawing.Color.Lime;
             this.textBox18.Location = new System.Drawing.Point(1561, 261);
-            this.textBox18.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox18.Margin = new System.Windows.Forms.Padding(5);
             this.textBox18.Multiline = true;
             this.textBox18.Name = "textBox18";
             this.textBox18.Size = new System.Drawing.Size(308, 72);
@@ -1003,7 +1099,7 @@
             this.textBox19.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox19.ForeColor = System.Drawing.Color.Lime;
             this.textBox19.Location = new System.Drawing.Point(1055, 261);
-            this.textBox19.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox19.Margin = new System.Windows.Forms.Padding(5);
             this.textBox19.Multiline = true;
             this.textBox19.Name = "textBox19";
             this.textBox19.Size = new System.Drawing.Size(308, 72);
@@ -1017,7 +1113,7 @@
             this.textBox20.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold);
             this.textBox20.ForeColor = System.Drawing.Color.Lime;
             this.textBox20.Location = new System.Drawing.Point(1561, 418);
-            this.textBox20.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.textBox20.Margin = new System.Windows.Forms.Padding(5);
             this.textBox20.Multiline = true;
             this.textBox20.Name = "textBox20";
             this.textBox20.Size = new System.Drawing.Size(308, 72);
@@ -1035,102 +1131,6 @@
             // 
             this.timer3.Interval = 10000;
             this.timer3.Tick += new System.EventHandler(this.timer3_Tick);
-            // 
-            // label24
-            // 
-            this.label24.AutoSize = true;
-            this.label24.Location = new System.Drawing.Point(64, 360);
-            this.label24.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(197, 31);
-            this.label24.TabIndex = 72;
-            this.label24.Text = "泵功耗（KWH）";
-            // 
-            // textBox15
-            // 
-            this.textBox15.BackColor = System.Drawing.Color.Black;
-            this.textBox15.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBox15.ForeColor = System.Drawing.Color.Lime;
-            this.textBox15.Location = new System.Drawing.Point(65, 406);
-            this.textBox15.Margin = new System.Windows.Forms.Padding(5);
-            this.textBox15.Multiline = true;
-            this.textBox15.Name = "textBox15";
-            this.textBox15.Size = new System.Drawing.Size(308, 72);
-            this.textBox15.TabIndex = 71;
-            this.textBox15.Text = "累计功耗";
-            this.textBox15.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
-            // label25
-            // 
-            this.label25.AutoSize = true;
-            this.label25.Location = new System.Drawing.Point(60, 360);
-            this.label25.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label25.Name = "label25";
-            this.label25.Size = new System.Drawing.Size(197, 31);
-            this.label25.TabIndex = 73;
-            this.label25.Text = "泵功耗（KWH）";
-            // 
-            // textBox22
-            // 
-            this.textBox22.BackColor = System.Drawing.Color.Black;
-            this.textBox22.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBox22.ForeColor = System.Drawing.Color.Lime;
-            this.textBox22.Location = new System.Drawing.Point(61, 406);
-            this.textBox22.Margin = new System.Windows.Forms.Padding(5);
-            this.textBox22.Multiline = true;
-            this.textBox22.Name = "textBox22";
-            this.textBox22.Size = new System.Drawing.Size(308, 72);
-            this.textBox22.TabIndex = 72;
-            this.textBox22.Text = "累计功耗";
-            this.textBox22.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
-            // label26
-            // 
-            this.label26.AutoSize = true;
-            this.label26.Location = new System.Drawing.Point(65, 360);
-            this.label26.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label26.Name = "label26";
-            this.label26.Size = new System.Drawing.Size(197, 31);
-            this.label26.TabIndex = 74;
-            this.label26.Text = "泵功耗（KWH）";
-            // 
-            // textBox23
-            // 
-            this.textBox23.BackColor = System.Drawing.Color.Black;
-            this.textBox23.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBox23.ForeColor = System.Drawing.Color.Lime;
-            this.textBox23.Location = new System.Drawing.Point(66, 406);
-            this.textBox23.Margin = new System.Windows.Forms.Padding(5);
-            this.textBox23.Multiline = true;
-            this.textBox23.Name = "textBox23";
-            this.textBox23.Size = new System.Drawing.Size(308, 72);
-            this.textBox23.TabIndex = 73;
-            this.textBox23.Text = "累计功耗";
-            this.textBox23.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            // 
-            // label27
-            // 
-            this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(60, 360);
-            this.label27.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label27.Name = "label27";
-            this.label27.Size = new System.Drawing.Size(197, 31);
-            this.label27.TabIndex = 75;
-            this.label27.Text = "泵功耗（KWH）";
-            // 
-            // textBox24
-            // 
-            this.textBox24.BackColor = System.Drawing.Color.Black;
-            this.textBox24.Font = new System.Drawing.Font("微软雅黑", 22.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBox24.ForeColor = System.Drawing.Color.Lime;
-            this.textBox24.Location = new System.Drawing.Point(61, 406);
-            this.textBox24.Margin = new System.Windows.Forms.Padding(5);
-            this.textBox24.Multiline = true;
-            this.textBox24.Name = "textBox24";
-            this.textBox24.Size = new System.Drawing.Size(308, 72);
-            this.textBox24.TabIndex = 74;
-            this.textBox24.Text = "累计功耗";
-            this.textBox24.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // Form1
             // 
@@ -1151,7 +1151,7 @@
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBox5);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.Margin = new System.Windows.Forms.Padding(5);
             this.Name = "Form1";
             this.Text = "BMS变频器模拟终端";
             this.Load += new System.EventHandler(this.Form1_Load);
