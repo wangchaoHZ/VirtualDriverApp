@@ -14,12 +14,189 @@ namespace VirtualDriverApp
 {
     public partial class Form1 : Form
     {
+        private const float MinimumScaledFontSize = 6.0f;
+
+        private readonly Dictionary<Control, ResponsiveControlState> _responsiveControls =
+            new Dictionary<Control, ResponsiveControlState>();
+        private readonly Dictionary<Control, Font> _responsiveFonts =
+            new Dictionary<Control, Font>();
+        private readonly Size _responsiveBaseClientSize;
+
+        private bool _isApplyingResponsiveLayout;
+
         public Form1()
         {
             InitializeComponent();
 
             // 设置窗体启动时自动居中
             this.StartPosition = FormStartPosition.CenterScreen;
+
+            _responsiveBaseClientSize = ClientSize;
+            CaptureResponsiveLayout(this);
+
+            DoubleBuffered = true;
+            Resize += Form1_Resize;
+            Disposed += Form1_Disposed;
+        }
+
+        private sealed class ResponsiveControlState
+        {
+            public Rectangle Bounds { get; set; }
+
+            public string FontFamilyName { get; set; }
+
+            public float FontSize { get; set; }
+
+            public FontStyle FontStyle { get; set; }
+
+            public GraphicsUnit FontUnit { get; set; }
+
+            public byte GdiCharSet { get; set; }
+
+            public bool GdiVerticalFont { get; set; }
+        }
+
+        private void CaptureResponsiveLayout(Control parent)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                Font font = control.Font;
+                _responsiveControls[control] = new ResponsiveControlState
+                {
+                    Bounds = control.Bounds,
+                    FontFamilyName = font.FontFamily.Name,
+                    FontSize = font.Size,
+                    FontStyle = font.Style,
+                    FontUnit = font.Unit,
+                    GdiCharSet = font.GdiCharSet,
+                    GdiVerticalFont = font.GdiVerticalFont
+                };
+
+                if (control.HasChildren)
+                {
+                    CaptureResponsiveLayout(control);
+                }
+            }
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            ApplyResponsiveLayout();
+        }
+
+        private void ApplyResponsiveLayout()
+        {
+            if (_isApplyingResponsiveLayout ||
+                _responsiveBaseClientSize.Width <= 0 ||
+                _responsiveBaseClientSize.Height <= 0 ||
+                ClientSize.Width <= 0 ||
+                ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            float widthScale = (float)ClientSize.Width / _responsiveBaseClientSize.Width;
+            float heightScale = (float)ClientSize.Height / _responsiveBaseClientSize.Height;
+            float scale = Math.Min(widthScale, heightScale);
+
+            int scaledWidth = (int)Math.Round(_responsiveBaseClientSize.Width * scale);
+            int scaledHeight = (int)Math.Round(_responsiveBaseClientSize.Height * scale);
+            int offsetX = (ClientSize.Width - scaledWidth) / 2;
+            int offsetY = (ClientSize.Height - scaledHeight) / 2;
+
+            _isApplyingResponsiveLayout = true;
+            SuspendLayout();
+
+            try
+            {
+                ScaleResponsiveControls(this, scale, offsetX, offsetY);
+            }
+            finally
+            {
+                ResumeLayout(true);
+                _isApplyingResponsiveLayout = false;
+            }
+        }
+
+        private void ScaleResponsiveControls(
+            Control parent,
+            float scale,
+            int parentOffsetX,
+            int parentOffsetY)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                ResponsiveControlState state;
+                if (!_responsiveControls.TryGetValue(control, out state))
+                {
+                    continue;
+                }
+
+                SetScaledFont(control, state, scale);
+
+                control.Bounds = new Rectangle(
+                    parentOffsetX + (int)Math.Round(state.Bounds.X * scale),
+                    parentOffsetY + (int)Math.Round(state.Bounds.Y * scale),
+                    Math.Max(1, (int)Math.Round(state.Bounds.Width * scale)),
+                    Math.Max(1, (int)Math.Round(state.Bounds.Height * scale)));
+
+                KeepControlInsideParent(control, parent);
+
+                if (control.HasChildren)
+                {
+                    ScaleResponsiveControls(control, scale, 0, 0);
+                }
+            }
+        }
+
+        private static void KeepControlInsideParent(Control control, Control parent)
+        {
+            int maximumLeft = Math.Max(0, parent.ClientSize.Width - control.Width);
+            int maximumTop = Math.Max(0, parent.ClientSize.Height - control.Height);
+
+            control.Left = Math.Min(Math.Max(0, control.Left), maximumLeft);
+            control.Top = Math.Min(Math.Max(0, control.Top), maximumTop);
+        }
+
+        private void SetScaledFont(
+            Control control,
+            ResponsiveControlState state,
+            float scale)
+        {
+            float fontSize = Math.Max(MinimumScaledFontSize, state.FontSize * scale);
+            if (Math.Abs(control.Font.Size - fontSize) < 0.05f)
+            {
+                return;
+            }
+
+            Font scaledFont = new Font(
+                state.FontFamilyName,
+                fontSize,
+                state.FontStyle,
+                state.FontUnit,
+                state.GdiCharSet,
+                state.GdiVerticalFont);
+
+            Font previousScaledFont;
+            _responsiveFonts.TryGetValue(control, out previousScaledFont);
+
+            control.Font = scaledFont;
+            _responsiveFonts[control] = scaledFont;
+
+            if (previousScaledFont != null)
+            {
+                previousScaledFont.Dispose();
+            }
+        }
+
+        private void Form1_Disposed(object sender, EventArgs e)
+        {
+            foreach (Font font in _responsiveFonts.Values)
+            {
+                font.Dispose();
+            }
+
+            _responsiveFonts.Clear();
         }
 
         private ModbusTcpClient AI01_ModbusClient;
