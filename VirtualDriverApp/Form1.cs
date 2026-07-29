@@ -216,11 +216,6 @@ namespace VirtualDriverApp
         ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
         ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
 
-        private double P1_Cur;
-        private double N1_Cur;
-        private double P2_Cur;
-        private double N2_Cur;
-
         private double PN1_PRESS_DIFF;
         private double PN2_PRESS_DIFF;
         private double PN1_FLOW_DIFF;
@@ -383,10 +378,10 @@ namespace VirtualDriverApp
             SetPumpFaultState(slave3, checkBox15.Checked);
             SetPumpFaultState(slave4, checkBox16.Checked);
 
-            P1_Cur = UpdatePumpDisplay(slave1, textBox1, textBox2, textBox15);
-            N1_Cur = UpdatePumpDisplay(slave2, textBox4, textBox3, textBox22);
-            P2_Cur = UpdatePumpDisplay(slave3, textBox8, textBox7, textBox23);
-            N2_Cur = UpdatePumpDisplay(slave4, textBox6, textBox5, textBox24);
+            UpdatePumpDisplay(slave1, textBox1, textBox2, textBox15);
+            UpdatePumpDisplay(slave2, textBox4, textBox3, textBox22);
+            UpdatePumpDisplay(slave3, textBox8, textBox7, textBox23);
+            UpdatePumpDisplay(slave4, textBox6, textBox5, textBox24);
 
             ModbusRtuSlave.SaveEnergyHistoryIfDue();
         }
@@ -414,7 +409,7 @@ namespace VirtualDriverApp
             slave.SetHoldingRegister(0x2100, hasFault ? (ushort)4 : (ushort)1);
         }
 
-        private static double UpdatePumpDisplay(
+        private static void UpdatePumpDisplay(
             ModbusRtuSlave slave,
             TextBox frequencyTextBox,
             TextBox currentTextBox,
@@ -424,8 +419,28 @@ namespace VirtualDriverApp
             frequencyTextBox.Text = snapshot.FrequencyHz.ToString("F2") + " HZ";
             currentTextBox.Text = snapshot.CurrentA.ToString("F2") + " A";
             energyTextBox.Text = snapshot.AccumulatedEnergyKwh.ToString("F3") + " kWh";
-            return snapshot.CurrentA;
         }
+
+        private static double Clamp(
+            double value,
+            double minimum,
+            double maximum)
+        {
+            return Math.Max(minimum, Math.Min(maximum, value));
+        }
+
+        private static ushort ToAnalogOutputValue(
+            double engineeringValue,
+            double engineeringMaximum)
+        {
+            double normalizedValue = Clamp(
+                engineeringValue / engineeringMaximum,
+                0.0,
+                1.0);
+            return (ushort)Math.Round(
+                4000.0 + normalizedValue * 16000.0);
+        }
+
         private void button2_Click(object sender, EventArgs e)
         {
             Application.Exit();
@@ -438,56 +453,103 @@ namespace VirtualDriverApp
             _timer2Busy = true;
             try
             {
-                double flow_max = 90.0;
-                double press_max = 0.20;
+                const double flowSensorMaximum = 90.0;
+                const double pressureSensorMaximum = 0.20;
 
-                double Cal_Base = 15.0; // 基准值
+                ModbusRtuSlave.PumpSnapshot p1Snapshot =
+                    slave1.GetSnapshot();
+                ModbusRtuSlave.PumpSnapshot n1Snapshot =
+                    slave2.GetSnapshot();
+                ModbusRtuSlave.PumpSnapshot p2Snapshot =
+                    slave3.GetSnapshot();
+                ModbusRtuSlave.PumpSnapshot n2Snapshot =
+                    slave4.GetSnapshot();
 
-                double P1_PV_Show = ((P1_Cur / Cal_Base) * (press_max));
-                double N1_PV_Show = ((N1_Cur / Cal_Base) * (press_max)) + PN1_PRESS_DIFF;
-                double P2_PV_Show = ((P2_Cur / Cal_Base) * (press_max));
-                double N2_PV_Show = ((N2_Cur / Cal_Base) * (press_max)) + PN2_PRESS_DIFF;
+                double P1_PV_Show = Clamp(
+                    p1Snapshot.PressureMpa,
+                    0.0,
+                    pressureSensorMaximum);
+                double N1_PV_Show = Clamp(
+                    n1Snapshot.PressureMpa + PN1_PRESS_DIFF,
+                    0.0,
+                    pressureSensorMaximum);
+                double P2_PV_Show = Clamp(
+                    p2Snapshot.PressureMpa,
+                    0.0,
+                    pressureSensorMaximum);
+                double N2_PV_Show = Clamp(
+                    n2Snapshot.PressureMpa + PN2_PRESS_DIFF,
+                    0.0,
+                    pressureSensorMaximum);
 
-                double P1_FV_Show = ((P1_Cur / Cal_Base) * (flow_max));
-                double N1_FV_Show = ((N1_Cur / Cal_Base) * (flow_max)) + PN1_FLOW_DIFF;
-                double P2_FV_Show = ((P2_Cur / Cal_Base) * (flow_max));
-                double N2_FV_Show = ((N2_Cur / Cal_Base) * (flow_max)) + PN2_FLOW_DIFF;
+                double P1_FV_Show = Clamp(
+                    p1Snapshot.FlowM3PerHour,
+                    0.0,
+                    flowSensorMaximum);
+                double N1_FV_Show = Clamp(
+                    n1Snapshot.FlowM3PerHour + PN1_FLOW_DIFF,
+                    0.0,
+                    flowSensorMaximum);
+                double P2_FV_Show = Clamp(
+                    p2Snapshot.FlowM3PerHour,
+                    0.0,
+                    flowSensorMaximum);
+                double N2_FV_Show = Clamp(
+                    n2Snapshot.FlowM3PerHour + PN2_FLOW_DIFF,
+                    0.0,
+                    flowSensorMaximum);
 
                 textBox10.Text = P1_PV_Show.ToString("F3") + "Mpa";
                 textBox9.Text = N1_PV_Show.ToString("F3") + "Mpa";
 
-                LogHelper.Logger.Info("---------------------------------------------");
-                LogHelper.Logger.Info("P1_PV_Show:" + textBox10.Text + " N1_PV_Show:" + textBox9.Text);
-
                 textBox14.Text = P1_FV_Show.ToString("F2") + "m³/h";
                 textBox13.Text = N1_FV_Show.ToString("F2") + "m³/h";
-
-                LogHelper.Logger.Info("P1_FV_Show:" + textBox14.Text + " N1_FV_Show:" + textBox13.Text);
 
                 textBox21.Text = P2_PV_Show.ToString("F3") + "Mpa";
                 textBox19.Text = N2_PV_Show.ToString("F3") + "Mpa";
 
-                LogHelper.Logger.Info("P2_PV_Show:" + textBox21.Text + " N2_PV_Show:" + textBox19.Text);
-
                 textBox16.Text = P2_FV_Show.ToString("F2") + "m³/h";
                 textBox18.Text = N2_FV_Show.ToString("F2") + "m³/h";
 
-                LogHelper.Logger.Info("P2_FV_Show:" + textBox16.Text + " N2_FV_Show:" + textBox18.Text);
-                LogHelper.Logger.Info("---------------------------------------------");
+                LogHelper.Logger.Debug(
+                    "泵水力模拟：P1={0:F3}MPa/{1:F2}m³/h，" +
+                    "N1={2:F3}MPa/{3:F2}m³/h，" +
+                    "P2={4:F3}MPa/{5:F2}m³/h，" +
+                    "N2={6:F3}MPa/{7:F2}m³/h",
+                    P1_PV_Show,
+                    P1_FV_Show,
+                    N1_PV_Show,
+                    N1_FV_Show,
+                    P2_PV_Show,
+                    P2_FV_Show,
+                    N2_PV_Show,
+                    N2_FV_Show);
 
+                ushort P1_PV_SET = ToAnalogOutputValue(
+                    P1_PV_Show,
+                    pressureSensorMaximum);
+                ushort P2_PV_SET = ToAnalogOutputValue(
+                    P2_PV_Show,
+                    pressureSensorMaximum);
+                ushort N1_PV_SET = ToAnalogOutputValue(
+                    N1_PV_Show,
+                    pressureSensorMaximum);
+                ushort N2_PV_SET = ToAnalogOutputValue(
+                    N2_PV_Show,
+                    pressureSensorMaximum);
 
-                double flow_sensor_max = 90.0;
-                double press_sensor_max = 0.20;
-
-                ushort P1_PV_SET = (ushort)((P1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-                ushort P2_PV_SET = (ushort)((P2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-                ushort N1_PV_SET = (ushort)((N1_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-                ushort N2_PV_SET = (ushort)((N2_PV_Show / press_sensor_max) * 16000.0 + 4000.0);
-
-                ushort P1_FV_SET = (ushort)((P1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-                ushort P2_FV_SET = (ushort)((P2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-                ushort N1_FV_SET = (ushort)((N1_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
-                ushort N2_FV_SET = (ushort)((N2_FV_Show / flow_sensor_max) * 16000.0 + 4000.0);
+                ushort P1_FV_SET = ToAnalogOutputValue(
+                    P1_FV_Show,
+                    flowSensorMaximum);
+                ushort P2_FV_SET = ToAnalogOutputValue(
+                    P2_FV_Show,
+                    flowSensorMaximum);
+                ushort N1_FV_SET = ToAnalogOutputValue(
+                    N1_FV_Show,
+                    flowSensorMaximum);
+                ushort N2_FV_SET = ToAnalogOutputValue(
+                    N2_FV_Show,
+                    flowSensorMaximum);
 
                 ushort S1_CUR_SET = 0;
                 ushort S2_CUR_SET = 0;
@@ -876,6 +938,11 @@ public class ModbusRtuSlave
     private const double PowerKilowattsPerAmp = 0.42500269603871194;
     private const double RunningFrequencyThresholdHz = 0.5;
     private const double EnergyHistorySaveIntervalSeconds = 10.0;
+    private const double HydraulicNoiseTimeConstantSeconds = 4.0;
+    private const double FlowResponseTimeConstantSeconds = 1.2;
+    private const double PressureResponseTimeConstantSeconds = 0.8;
+    private const double MaximumSimulatedFlowM3PerHour = 90.0;
+    private const double MaximumSimulatedPressureMpa = 0.20;
 
     private static readonly Dictionary<byte, ModbusRtuSlave> slaveInstances =
         new Dictionary<byte, ModbusRtuSlave>();
@@ -896,6 +963,12 @@ public class ModbusRtuSlave
     private readonly double currentQuadraticCoefficient;
     private readonly double currentLinearCoefficient;
     private readonly double currentConstantCoefficient;
+    private readonly double pressureLinearCoefficient;
+    private readonly double pressureQuadraticCoefficient;
+    private readonly double flowLinearCoefficient;
+    private readonly double flowQuadraticCoefficient;
+    private readonly double pressureNoiseStandardDeviation;
+    private readonly double flowNoiseStandardDeviation;
 
     private double lastSimulationSeconds;
     private double currentFrequencyHz;
@@ -904,6 +977,10 @@ public class ModbusRtuSlave
     private double currentNoiseA;
     private double instantaneousPowerKw;
     private double accumulatedEnergyKwh;
+    private double pressureNoiseMpa;
+    private double flowNoiseM3PerHour;
+    private double simulatedPressureMpa;
+    private double simulatedFlowM3PerHour;
     private double? currentOverrideA;
 
     public sealed class PumpSnapshot
@@ -917,6 +994,10 @@ public class ModbusRtuSlave
         public double InstantaneousPowerKw { get; internal set; }
 
         public double AccumulatedEnergyKwh { get; internal set; }
+
+        public double PressureMpa { get; internal set; }
+
+        public double FlowM3PerHour { get; internal set; }
     }
 
     // 静态构造函数，初始化串口
@@ -953,26 +1034,56 @@ public class ModbusRtuSlave
                 currentQuadraticCoefficient = 0.005063652281299397;
                 currentLinearCoefficient = -0.05049377264325327;
                 currentConstantCoefficient = 5.72586487089944;
+                pressureLinearCoefficient = -0.0017519264267753013;
+                pressureQuadraticCoefficient = 0.000054289938274595505;
+                flowLinearCoefficient = 1.0470850992100933;
+                flowQuadraticCoefficient = 0.001936579593091914;
+                pressureNoiseStandardDeviation = 0.0008;
+                flowNoiseStandardDeviation = 0.45;
                 break;
             case 22:
                 currentQuadraticCoefficient = 0.004814660602610448;
                 currentLinearCoefficient = -0.030112118746925126;
                 currentConstantCoefficient = 5.922344660623048;
+                pressureLinearCoefficient = -0.0014111359146488102;
+                pressureQuadraticCoefficient = 0.00004808691434077446;
+                flowLinearCoefficient = 0.9488193515208853;
+                flowQuadraticCoefficient = 0.002600661293946133;
+                pressureNoiseStandardDeviation = 0.0008;
+                flowNoiseStandardDeviation = 0.45;
                 break;
             case 33:
                 currentQuadraticCoefficient = 0.005129481141858832;
                 currentLinearCoefficient = -0.047392561760144405;
                 currentConstantCoefficient = 5.9362718966768675;
+                pressureLinearCoefficient = -0.001822022767125942;
+                pressureQuadraticCoefficient = 0.000054534776543527415;
+                flowLinearCoefficient = 1.1770360145564065;
+                flowQuadraticCoefficient = 0.0;
+                pressureNoiseStandardDeviation = 0.0007;
+                flowNoiseStandardDeviation = 0.65;
                 break;
             case 44:
                 currentQuadraticCoefficient = 0.004907373916841373;
                 currentLinearCoefficient = -0.03910113450718124;
                 currentConstantCoefficient = 6.053938877833055;
+                pressureLinearCoefficient = -0.0014474703331022654;
+                pressureQuadraticCoefficient = 0.00004910647037848411;
+                flowLinearCoefficient = 1.1151560232888347;
+                flowQuadraticCoefficient = -0.00015769372956885515;
+                pressureNoiseStandardDeviation = 0.0008;
+                flowNoiseStandardDeviation = 0.40;
                 break;
             default:
                 currentQuadraticCoefficient = 0.004978792;
                 currentLinearCoefficient = -0.041774;
                 currentConstantCoefficient = 5.909355;
+                pressureLinearCoefficient = -0.0016081388604130798;
+                pressureQuadraticCoefficient = 0.00005150452488434537;
+                flowLinearCoefficient = 1.072024122144055;
+                flowQuadraticCoefficient = 0.001094886789367298;
+                pressureNoiseStandardDeviation = 0.0008;
+                flowNoiseStandardDeviation = 0.50;
                 break;
         }
 
@@ -1097,7 +1208,9 @@ public class ModbusRtuSlave
                 TargetFrequencyHz = targetFrequencyHz,
                 CurrentA = simulatedCurrentA,
                 InstantaneousPowerKw = instantaneousPowerKw,
-                AccumulatedEnergyKwh = accumulatedEnergyKwh
+                AccumulatedEnergyKwh = accumulatedEnergyKwh,
+                PressureMpa = simulatedPressureMpa,
+                FlowM3PerHour = simulatedFlowM3PerHour
             };
         }
     }
@@ -1170,8 +1283,80 @@ public class ModbusRtuSlave
                 currentNoiseA = 0.0;
             }
 
+            UpdateHydraulicStateUnsafe(elapsedSeconds);
             UpdateOutputRegistersUnsafe();
         }
+    }
+
+    private void UpdateHydraulicStateUnsafe(double elapsedSeconds)
+    {
+        double basePressureMpa =
+            CalculateBasePressureMpa(currentFrequencyHz);
+        double baseFlowM3PerHour =
+            CalculateBaseFlowM3PerHour(currentFrequencyHz);
+
+        double noiseSmoothingFactor =
+            1.0 - Math.Exp(
+                -elapsedSeconds /
+                HydraulicNoiseTimeConstantSeconds);
+
+        if (currentFrequencyHz >= RunningFrequencyThresholdHz)
+        {
+            double pressureNoiseTarget =
+                basePressureMpa > 0.0
+                    ? NextGaussianLike() *
+                        pressureNoiseStandardDeviation
+                    : 0.0;
+            double flowNoiseTarget =
+                NextGaussianLike() *
+                flowNoiseStandardDeviation;
+
+            pressureNoiseMpa +=
+                (pressureNoiseTarget - pressureNoiseMpa) *
+                noiseSmoothingFactor;
+            flowNoiseM3PerHour +=
+                (flowNoiseTarget - flowNoiseM3PerHour) *
+                noiseSmoothingFactor;
+        }
+        else
+        {
+            pressureNoiseMpa = 0.0;
+            flowNoiseM3PerHour = 0.0;
+        }
+
+        double targetPressureMpa = Math.Max(
+            0.0,
+            basePressureMpa + pressureNoiseMpa);
+        double targetFlowM3PerHour = Math.Max(
+            0.0,
+            baseFlowM3PerHour + flowNoiseM3PerHour);
+
+        double pressureResponseFactor =
+            1.0 - Math.Exp(
+                -elapsedSeconds /
+                PressureResponseTimeConstantSeconds);
+        double flowResponseFactor =
+            1.0 - Math.Exp(
+                -elapsedSeconds /
+                FlowResponseTimeConstantSeconds);
+
+        simulatedPressureMpa +=
+            (targetPressureMpa - simulatedPressureMpa) *
+            pressureResponseFactor;
+        simulatedFlowM3PerHour +=
+            (targetFlowM3PerHour - simulatedFlowM3PerHour) *
+            flowResponseFactor;
+
+        simulatedPressureMpa = Math.Max(
+            0.0,
+            Math.Min(
+                MaximumSimulatedPressureMpa,
+                simulatedPressureMpa));
+        simulatedFlowM3PerHour = Math.Max(
+            0.0,
+            Math.Min(
+                MaximumSimulatedFlowM3PerHour,
+                simulatedFlowM3PerHour));
     }
 
     private void UpdateOutputRegistersUnsafe()
@@ -1210,6 +1395,53 @@ public class ModbusRtuSlave
             currentConstantCoefficient;
 
         return Math.Max(0.0, Math.Min(30.0, currentA));
+    }
+
+    private double CalculateBasePressureMpa(double frequencyHz)
+    {
+        if (frequencyHz < RunningFrequencyThresholdHz)
+        {
+            return 0.0;
+        }
+
+        double pressureMpa =
+            pressureLinearCoefficient * frequencyHz +
+            pressureQuadraticCoefficient *
+                frequencyHz * frequencyHz;
+        return Math.Max(
+            0.0,
+            Math.Min(
+                MaximumSimulatedPressureMpa,
+                pressureMpa));
+    }
+
+    private double CalculateBaseFlowM3PerHour(double frequencyHz)
+    {
+        if (frequencyHz < RunningFrequencyThresholdHz)
+        {
+            return 0.0;
+        }
+
+        double flowM3PerHour =
+            flowLinearCoefficient * frequencyHz +
+            flowQuadraticCoefficient *
+                frequencyHz * frequencyHz;
+        return Math.Max(
+            0.0,
+            Math.Min(
+                MaximumSimulatedFlowM3PerHour,
+                flowM3PerHour));
+    }
+
+    private double NextGaussianLike()
+    {
+        double sum = 0.0;
+        for (int index = 0; index < 6; index++)
+        {
+            sum += random.NextDouble();
+        }
+
+        return (sum - 3.0) * 1.4142135623730951;
     }
 
     private double CalculateBasePowerKw(double frequencyHz)
