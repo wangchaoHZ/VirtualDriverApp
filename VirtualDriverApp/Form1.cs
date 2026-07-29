@@ -191,6 +191,17 @@ namespace VirtualDriverApp
 
         private void Form1_Disposed(object sender, EventArgs e)
         {
+            _isShuttingDown = true;
+            timer1.Enabled = false;
+            timer2.Enabled = false;
+            timer3.Enabled = false;
+            _lifetimeSource.Cancel();
+
+            _ai01Client.Dispose();
+            _ai02Client.Dispose();
+            _doClient.Dispose();
+            _diClient.Dispose();
+
             foreach (Font font in _responsiveFonts.Values)
             {
                 font.Dispose();
@@ -199,16 +210,34 @@ namespace VirtualDriverApp
             _responsiveFonts.Clear();
         }
 
-        private ModbusTcpClient AI01_ModbusClient;
-        private byte AI01_ModbusClient_ID = 5;
+        private const byte AI01_ModbusClient_ID = 5;
+        private const byte DO_ModbusClient_ID = 2;
+        private const byte DI_ModbusClient_ID = 3;
+        private const int DiDataMaximumAgeSeconds = 5;
 
-        private ModbusTcpClient AI02_ModbusClient;
-
-        private ModbusTcpClient DO_ModbusClient;
-        private byte DO_ModbusClient_ID = 2;
-
-        private ModbusTcpClient DI_ModbusClient;
-        private byte DI_ModbusClient_ID = 3;
+        private readonly ResilientModbusTcpClient _ai01Client =
+            new ResilientModbusTcpClient(
+                "AI01",
+                "192.168.1.133",
+                ModbusEndianness.BigEndian);
+        private readonly ResilientModbusTcpClient _ai02Client =
+            new ResilientModbusTcpClient(
+                "AI02",
+                "192.168.1.134",
+                ModbusEndianness.BigEndian);
+        private readonly ResilientModbusTcpClient _doClient =
+            new ResilientModbusTcpClient(
+                "DO",
+                "192.168.1.131",
+                ModbusEndianness.BigEndian);
+        private readonly ResilientModbusTcpClient _diClient =
+            new ResilientModbusTcpClient(
+                "DI",
+                "192.168.1.132",
+                ModbusEndianness.BigEndian);
+        private readonly CancellationTokenSource _lifetimeSource =
+            new CancellationTokenSource();
+        private readonly object _diStateLock = new object();
 
         // 创建四个从站实例，分别为地址11、22、33、44
         ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
@@ -221,12 +250,12 @@ namespace VirtualDriverApp
         private double PN1_FLOW_DIFF;
         private double PN2_FLOW_DIFF;
 
-        private ushort[] DI_InputRegisters = new ushort[32];
-
-        // 新增：用于串行化各 Modbus 客户端的访问，避免并发与潜在死锁
-        private readonly SemaphoreSlim _ai01Lock = new SemaphoreSlim(1, 1);
-        private readonly SemaphoreSlim _diLock = new SemaphoreSlim(1, 1);
-        private readonly SemaphoreSlim _doLock = new SemaphoreSlim(1, 1);
+        private readonly ushort[] DI_InputRegisters = new ushort[32];
+        private bool _diDataValid;
+        private DateTime _diLastSuccessUtc = DateTime.MinValue;
+        private DateTime _lastDiInvalidLogUtc = DateTime.MinValue;
+        private bool _isShuttingDown;
+        private bool _systemStarted;
 
         // 新增：防止 Timer 重入（定时器回调在 UI 线程，网络慢时容易叠加）
         private volatile bool _timer2Busy = false;
@@ -272,77 +301,64 @@ namespace VirtualDriverApp
             slave4.SetHoldingRegister(0, 0);  // 设置从站44的寄存器0初始值
         }
 
-
-        // 简单写寄存器带重试方法
-        private void WriteRegisterWithRetry(FluentModbus.ModbusClient client, int clientId, int register, short value, int retryCount = 5)
-        {
-            for (int i = 0; i < retryCount; i++)
-            {
-                try
-                {
-                    client.WriteSingleRegister(clientId, register, value);
-                    break; // 成功写入跳出循环
-                }
-                catch (FluentModbus.ModbusException ex)
-                {
-                    // 可记录日志或显示提示
-                    Console.WriteLine($"Modbus写入寄存器异常: {register}, 第{i + 1}次尝试: {ex.Message}");
-                    System.Threading.Thread.Sleep(180); // 失败时稍微延时再重试
-                                                        // 最后一次失败可做告警或忽略
-                }
-                catch (Exception ex)
-                {
-                    // 其他异常也捕获
-                    Console.WriteLine($"其他异常: {ex.Message}");
-                    System.Threading.Thread.Sleep(200);
-                }
-            }
-        }
-
         // 修改为异步，避免在 UI 线程同步阻塞 Connect 和 Sleep
         private async void button1_Click(object sender, EventArgs e)
         {
+            if (_systemStarted || _isShuttingDown)
+            {
+                return;
+            }
+
             button1.Enabled = false;
             label10.ForeColor = Color.Black;
             label10.Text = "正在连接...";
 
             try
             {
-                // ModbusTcpClient实例化
-                AI01_ModbusClient = new ModbusTcpClient();
-                AI02_ModbusClient = new ModbusTcpClient();
-                DO_ModbusClient = new ModbusTcpClient();
-                DI_ModbusClient = new ModbusTcpClient();
-
                 string selectedPort = comboBox1.SelectedItem?.ToString();
+                CancellationToken cancellationToken =
+                    _lifetimeSource.Token;
 
-                // 在后台线程执行所有可能阻塞的 I/O（网络连接、串口打开）
-                await Task.Run(() =>
+                // 四个设备并行建立连接，每个连接均有显式超时和重试。
+                await Task.WhenAll(
+                    _ai01Client.ConnectAsync(cancellationToken),
+                    _ai02Client.ConnectAsync(cancellationToken),
+                    _doClient.ConnectAsync(cancellationToken),
+                    _diClient.ConnectAsync(cancellationToken));
+
+                await Task.Run(
+                    () => ModbusRtuSlave.SetSerialPortSettings(
+                        selectedPort,
+                        9600,
+                        Parity.None,
+                        8,
+                        StopBits.One),
+                    cancellationToken);
+
+                // 保留原有的四次 DO 初始化写入行为。
+                for (int writeIndex = 0;
+                    writeIndex < 4;
+                    writeIndex++)
                 {
-                    // 依次连接"192.168.1.133", "192.168.1.134" "192.168.1.131", "192.168.1.132" 
-                    AI01_ModbusClient.Connect("192.168.1.133", ModbusEndianness.BigEndian);
-                    AI02_ModbusClient.Connect("192.168.1.134", ModbusEndianness.BigEndian);
+                    await _doClient.ExecuteAsync(
+                        "初始化 DO 寄存器 4",
+                        activeClient =>
+                            activeClient.WriteSingleRegister(
+                                DO_ModbusClient_ID,
+                                4,
+                                (short)1),
+                        cancellationToken);
 
-                    DO_ModbusClient.Connect("192.168.1.131", ModbusEndianness.BigEndian);
-                    DI_ModbusClient.Connect("192.168.1.132", ModbusEndianness.BigEndian);
+                    if (writeIndex < 3)
+                    {
+                        await Task.Delay(
+                            250,
+                            cancellationToken);
+                    }
+                }
 
-                    // comboBox1为变频器端口选择窗
-                    // 设置串口配置（打开串口）
-                    ModbusRtuSlave.SetSerialPortSettings(selectedPort, 9600, Parity.None, 8, StopBits.One);
-
-                    // 稍作延时给串口/设备稳定（后台线程里，不阻塞 UI）
-                    Thread.Sleep(250);
-                    WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
-                    Thread.Sleep(250);
-                    WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
-                    Thread.Sleep(250);
-                    WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
-                    Thread.Sleep(250);
-                    WriteRegisterWithRetry(DO_ModbusClient, DO_ModbusClient_ID, 4, 1);
-
-                    // 启动共享的 Modbus 线程
-                    ModbusRtuSlave.Start();
-                });
+                ModbusRtuSlave.Start();
+                _systemStarted = true;
 
                 button1.ForeColor = Color.Green;
                 label10.ForeColor = Color.Green;
@@ -353,8 +369,25 @@ namespace VirtualDriverApp
                 timer2.Enabled = true;
                 timer3.Enabled = true;
             }
+            catch (OperationCanceledException)
+                when (_isShuttingDown)
+            {
+                // 程序退出时的正常取消，不显示错误弹窗。
+            }
             catch (Exception ex)
             {
+                try
+                {
+                    ModbusRtuSlave.Stop();
+                }
+                catch (Exception stopException)
+                {
+                    LogHelper.Logger.Warn(
+                        stopException,
+                        "启动失败后关闭串口服务时出现异常。");
+                }
+
+                DisconnectAllTcpClients();
                 label10.ForeColor = Color.Red;
                 label10.Text = "连接失败";
                 LogHelper.Logger.Error(ex, "启动连接失败");
@@ -362,8 +395,18 @@ namespace VirtualDriverApp
             }
             finally
             {
-                button1.Enabled = true;
+                button1.Enabled =
+                    !_systemStarted &&
+                    !_isShuttingDown;
             }
+        }
+
+        private void DisconnectAllTcpClients()
+        {
+            _ai01Client.Disconnect();
+            _ai02Client.Disconnect();
+            _doClient.Disconnect();
+            _diClient.Disconnect();
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -384,6 +427,37 @@ namespace VirtualDriverApp
             UpdatePumpDisplay(slave4, textBox6, textBox5, textBox24);
 
             ModbusRtuSlave.SaveEnergyHistoryIfDue();
+            UpdateTcpConnectionStatus();
+        }
+
+        private void UpdateTcpConnectionStatus()
+        {
+            if (!_systemStarted || _isShuttingDown)
+            {
+                return;
+            }
+
+            ModbusTcpHealthSnapshot[] snapshots =
+            {
+                _ai01Client.GetHealthSnapshot(),
+                _ai02Client.GetHealthSnapshot(),
+                _doClient.GetHealthSnapshot(),
+                _diClient.GetHealthSnapshot()
+            };
+
+            bool isRecovering = snapshots.Any(
+                snapshot =>
+                    snapshot.State !=
+                    ModbusTcpConnectionState.Connected);
+
+            label10.ForeColor =
+                isRecovering
+                    ? Color.DarkOrange
+                    : Color.Green;
+            label10.Text =
+                isRecovering
+                    ? "通信恢复中..."
+                    : "运行中";
         }
 
         private static void ApplyCurrentFault(
@@ -449,7 +523,7 @@ namespace VirtualDriverApp
         // 注意：该 Tick 由 UI 线程调用。将“所有网络 I/O”移到后台，并加防重入。
         private async void timer2_Tick(object sender, EventArgs e)
         {
-            if (_timer2Busy) return;
+            if (_timer2Busy || _isShuttingDown) return;
             _timer2Busy = true;
             try
             {
@@ -559,39 +633,59 @@ namespace VirtualDriverApp
 
                 Console.WriteLine("S1 Cur Set:" + S1_CUR_SET.ToString() + "S2 Cur Set:" + S2_CUR_SET);
 
-                // 把 DI 读取放到后台线程，并串行化访问，避免在 UI 线程阻塞
                 byte[] diWordArray = null;
                 try
                 {
-                    diWordArray = await Task.Run(async () =>
-                    {
-                        await _diLock.WaitAsync();
-                        try
-                        {
-                            // 如果设备未连接，直接抛异常让上层捕获
-                            return DI_ModbusClient.ReadInputRegisters(DI_ModbusClient_ID, 0, 32).ToArray();
-                        }
-                        finally
-                        {
-                            _diLock.Release();
-                        }
-                    });
+                    diWordArray = await _diClient.ExecuteAsync(
+                        "读取 DI 输入寄存器",
+                        activeClient =>
+                            activeClient.ReadInputRegisters(
+                                DI_ModbusClient_ID,
+                                0,
+                                32).ToArray(),
+                        _lifetimeSource.Token);
+                }
+                catch (OperationCanceledException)
+                    when (_isShuttingDown)
+                {
+                    return;
+                }
+                catch (ModbusTcpCommunicationException)
+                {
+                    MarkDiDataInvalid();
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.Logger.Error(ex, "读取 DI 输入寄存器失败");
+                    MarkDiDataInvalid();
+                    LogHelper.Logger.Error(
+                        ex,
+                        "处理 DI 输入寄存器时发生异常。");
                 }
 
                 if (diWordArray != null && diWordArray.Length >= 64)
                 {
-                    for (int i = 0; i < 32; i++)
+                    lock (_diStateLock)
                     {
-                        DI_InputRegisters[i] = (ushort)((diWordArray[i * 2] << 8) | diWordArray[i * 2 + 1]);
+                        for (int i = 0; i < 32; i++)
+                        {
+                            DI_InputRegisters[i] = (ushort)(
+                                (diWordArray[i * 2] << 8) |
+                                diWordArray[i * 2 + 1]);
+                        }
+
+                        _diLastSuccessUtc = DateTime.UtcNow;
+                        _diDataValid = true;
                     }
+                }
+                else if (diWordArray != null)
+                {
+                    MarkDiDataInvalid();
+                    LogHelper.Logger.Error(
+                        "DI 返回数据长度不足：期望至少 64 字节，实际 {0} 字节。",
+                        diWordArray.Length);
                 }
 
 
-                // 发送 Modbus 请求到后台线程（只写操作放后台）
                 ushort startAddress = 10;
 
                 ushort[] values =
@@ -616,28 +710,23 @@ namespace VirtualDriverApp
 
                 try
                 {
-                    await Task.Run(async () =>
-                    {
-                        await _ai01Lock.WaitAsync();
-                        try
-                        {
-                            AI01_ModbusClient.WriteMultipleRegisters(AI01_ModbusClient_ID, startAddress, values);
-                        }
-                        finally
-                        {
-                            _ai01Lock.Release();
-                        }
-                    });
+                    await _ai01Client.ExecuteAsync(
+                        "写入 AI01 模拟量",
+                        activeClient =>
+                            activeClient.WriteMultipleRegisters(
+                                AI01_ModbusClient_ID,
+                                startAddress,
+                                values),
+                        _lifetimeSource.Token);
                 }
-                catch (FluentModbus.ModbusException ex)
+                catch (OperationCanceledException)
+                    when (_isShuttingDown)
                 {
-                    // 捕获 Modbus 异常
-                    Console.WriteLine($"Modbus 写入异常: {ex.Message}");
+                    return;
                 }
-                catch (Exception ex)
+                catch (ModbusTcpCommunicationException)
                 {
-                    // 捕获其他异常
-                    Console.WriteLine($"其他异常: {ex.Message}");
+                    // 连接管理器已经限频记录，并将在下一次操作时自动重连。
                 }
             }
             catch (Exception exOuter)
@@ -765,156 +854,109 @@ namespace VirtualDriverApp
             PN1_FLOW_DIFF = -PN1_FLOW_DIFF;
         }
 
-        // 修改为异步，避免在 UI 线程内同步网络写阻塞
+        private void MarkDiDataInvalid()
+        {
+            lock (_diStateLock)
+            {
+                _diDataValid = false;
+            }
+        }
+
+        private bool TryGetFreshDiInputs(
+            out ushort input2,
+            out ushort input3)
+        {
+            lock (_diStateLock)
+            {
+                bool isFresh =
+                    _diDataValid &&
+                    (DateTime.UtcNow - _diLastSuccessUtc)
+                        .TotalSeconds <=
+                    DiDataMaximumAgeSeconds;
+
+                if (!isFresh)
+                {
+                    input2 = 0;
+                    input3 = 0;
+                    return false;
+                }
+
+                input2 = DI_InputRegisters[2];
+                input3 = DI_InputRegisters[3];
+                return true;
+            }
+        }
+
+        private void LogInvalidDiStateIfDue()
+        {
+            DateTime nowUtc = DateTime.UtcNow;
+            if ((nowUtc - _lastDiInvalidLogUtc).TotalSeconds <
+                30)
+            {
+                return;
+            }
+
+            _lastDiInvalidLogUtc = nowUtc;
+            LogHelper.Logger.Warn(
+                "DI 数据无效或已超过 {0} 秒未更新，暂停 DO 输出更新。",
+                DiDataMaximumAgeSeconds);
+        }
+
+        private static ushort[] BuildDoOutputValues(
+            ushort input2,
+            ushort input3)
+        {
+            bool firstInputIsActive = input2 == 1;
+            bool secondInputIsActive = input3 == 1;
+
+            return new[]
+            {
+                firstInputIsActive ? (ushort)1 : (ushort)0,
+                firstInputIsActive ? (ushort)0 : (ushort)1,
+                secondInputIsActive ? (ushort)1 : (ushort)0,
+                secondInputIsActive ? (ushort)0 : (ushort)1
+            };
+        }
+
+        // DO 仅执行写入，不进行状态回读或写后确认。
         private async void timer3_Tick(object sender, EventArgs e)
         {
-            if (_timer3Busy) return;
+            if (_timer3Busy || _isShuttingDown) return;
             _timer3Busy = true;
             try
             {
-                if (DI_InputRegisters[2] == 1 && DI_InputRegisters[3] == 1)
+                ushort input2;
+                ushort input3;
+                if (!TryGetFreshDiInputs(
+                    out input2,
+                    out input3))
                 {
-                    ushort[] open_values =
-                    {
-                        1,
-                        0,
-                        1,
-                        0
-                    };
-
-                    try
-                    {
-                        await Task.Run(async () =>
-                        {
-                            await _doLock.WaitAsync();
-                            try
-                            {
-                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                            }
-                            finally
-                            {
-                                _doLock.Release();
-                            }
-                        });
-                    }
-                    catch (FluentModbus.ModbusException ex)
-                    {
-                        // 捕获 Modbus 异常
-                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获其他异常
-                        Console.WriteLine($"其他异常: {ex.Message}");
-                    }
+                    LogInvalidDiStateIfDue();
+                    return;
                 }
-                else if (DI_InputRegisters[2] == 1 && DI_InputRegisters[3] == 0)
-                {
-                    ushort[] open_values =
-                    {
-                        1,
-                        0,
-                        0,
-                        1
-                    };
 
-                    try
-                    {
-                        await Task.Run(async () =>
-                        {
-                            await _doLock.WaitAsync();
-                            try
-                            {
-                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                            }
-                            finally
-                            {
-                                _doLock.Release();
-                            }
-                        });
-                    }
-                    catch (FluentModbus.ModbusException ex)
-                    {
-                        // 捕获 Modbus 异常
-                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获其他异常
-                        Console.WriteLine($"其他异常: {ex.Message}");
-                    }
+                ushort[] outputValues =
+                    BuildDoOutputValues(input2, input3);
+
+                try
+                {
+                    await _doClient.ExecuteAsync(
+                        "写入 DO 输出",
+                        activeClient =>
+                            activeClient.WriteMultipleRegisters(
+                                DO_ModbusClient_ID,
+                                5,
+                                outputValues),
+                        _lifetimeSource.Token);
                 }
-                else if (DI_InputRegisters[2] == 0 && DI_InputRegisters[3] == 1)
+                catch (OperationCanceledException)
+                    when (_isShuttingDown)
                 {
-                    ushort[] open_values =
-                    {
-                        0,
-                        1,
-                        1,
-                        0
-                    };
-
-                    try
-                    {
-                        await Task.Run(async () =>
-                        {
-                            await _doLock.WaitAsync();
-                            try
-                            {
-                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                            }
-                            finally
-                            {
-                                _doLock.Release();
-                            }
-                        });
-                    }
-                    catch (FluentModbus.ModbusException ex)
-                    {
-                        // 捕获 Modbus 异常
-                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获其他异常
-                        Console.WriteLine($"其他异常: {ex.Message}");
-                    }
+                    return;
                 }
-                else
+                catch (ModbusTcpCommunicationException)
                 {
-                    ushort[] open_values =
-                    {
-                        0,
-                        1,
-                        0,
-                        1
-                    };
-
-                    try
-                    {
-                        await Task.Run(async () =>
-                        {
-                            await _doLock.WaitAsync();
-                            try
-                            {
-                                DO_ModbusClient.WriteMultipleRegisters(DO_ModbusClient_ID, 5, open_values);
-                            }
-                            finally
-                            {
-                                _doLock.Release();
-                            }
-                        });
-                    }
-                    catch (FluentModbus.ModbusException ex)
-                    {
-                        // 捕获 Modbus 异常
-                        Console.WriteLine($"Modbus 写入异常: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获其他异常
-                        Console.WriteLine($"其他异常: {ex.Message}");
-                    }
+                    // 连接管理器已经限频记录，并将在下一次操作时自动重连。
                 }
             }
             catch (Exception exOuter)
