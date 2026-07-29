@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
@@ -388,6 +387,8 @@ namespace VirtualDriverApp
             N1_Cur = UpdatePumpDisplay(slave2, textBox4, textBox3, textBox22);
             P2_Cur = UpdatePumpDisplay(slave3, textBox8, textBox7, textBox23);
             N2_Cur = UpdatePumpDisplay(slave4, textBox6, textBox5, textBox24);
+
+            ModbusRtuSlave.SaveEnergyHistoryIfDue();
         }
 
         private static void ApplyCurrentFault(
@@ -874,11 +875,17 @@ public class ModbusRtuSlave
     private const double RampRateHzPerSecond = 2.5;
     private const double PowerKilowattsPerAmp = 0.42500269603871194;
     private const double RunningFrequencyThresholdHz = 0.5;
+    private const double EnergyHistorySaveIntervalSeconds = 10.0;
 
-    private static bool isPortOpen;
-    private static SerialPort serialPort;
     private static readonly Dictionary<byte, ModbusRtuSlave> slaveInstances =
         new Dictionary<byte, ModbusRtuSlave>();
+    private static readonly ModbusRtuSerialServer serialServer;
+    private static readonly object energyHistorySaveLock = new object();
+    private static readonly Stopwatch energyHistorySaveClock =
+        Stopwatch.StartNew();
+    private static readonly Dictionary<byte, double> initialEnergyByAddress;
+
+    private static double lastEnergyHistorySaveSeconds;
 
     private readonly object stateLock = new object();
     private readonly Stopwatch simulationClock = Stopwatch.StartNew();
@@ -915,28 +922,22 @@ public class ModbusRtuSlave
     // 静态构造函数，初始化串口
     static ModbusRtuSlave()
     {
-        // 串口未打开时初始化
-        serialPort = new SerialPort();
-        serialPort.DataReceived += SerialPort_DataReceived; // 注册 DataReceived 事件
+        initialEnergyByAddress = EnergyHistoryStore.Load();
+        serialServer = new ModbusRtuSerialServer(
+            ProcessRequestFrame);
+
+        Application.ApplicationExit += OnApplicationExit;
     }
 
     // 设置串口参数的接口，外部调用此方法设置串口
     public static void SetSerialPortSettings(string portName = "COM3", int baudRate = 9600, Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One)
     {
-        if (!isPortOpen)
-        {
-            serialPort.PortName = portName;
-            serialPort.BaudRate = baudRate;
-            serialPort.Parity = parity;
-            serialPort.DataBits = dataBits;
-            serialPort.StopBits = stopBits;
-            serialPort.Open();
-            isPortOpen = true;  // 标记串口已打开
-        }
-        else
-        {
-            Console.WriteLine("串口已经打开，无法更改设置。");
-        }
+        serialServer.ConfigureAndOpen(
+            portName,
+            baudRate,
+            parity,
+            dataBits,
+            stopBits);
     }
 
     // 构造函数，初始化每个从站
@@ -976,6 +977,14 @@ public class ModbusRtuSlave
         }
 
         holdingRegisters[0x2100] = 1;
+        double initialEnergyKwh;
+        if (initialEnergyByAddress.TryGetValue(
+            slaveAddress,
+            out initialEnergyKwh))
+        {
+            accumulatedEnergyKwh = initialEnergyKwh;
+        }
+
         lastSimulationSeconds = simulationClock.Elapsed.TotalSeconds;
 
         lock (slaveInstances)
@@ -987,8 +996,40 @@ public class ModbusRtuSlave
     // 启动 Modbus RTU 从站（只启动一个串口线程）
     public static void Start()
     {
-        // 启动 Modbus 处理线程（注意，这里没有使用 Thread.Sleep）
-        Console.WriteLine("Modbus RTU Slave started...");
+        serialServer.Start();
+        LogHelper.Logger.Info("Modbus RTU 模拟变频器已启动。");
+    }
+
+    public static void Stop()
+    {
+        serialServer.Stop();
+    }
+
+    public static string HistoryEnergyFilePath =>
+        EnergyHistoryStore.FilePath;
+
+    public static void SaveEnergyHistoryIfDue()
+    {
+        lock (energyHistorySaveLock)
+        {
+            double nowSeconds =
+                energyHistorySaveClock.Elapsed.TotalSeconds;
+            if (nowSeconds - lastEnergyHistorySaveSeconds <
+                EnergyHistorySaveIntervalSeconds)
+            {
+                return;
+            }
+
+            SaveEnergyHistoryUnsafe();
+        }
+    }
+
+    public static void SaveEnergyHistory()
+    {
+        lock (energyHistorySaveLock)
+        {
+            SaveEnergyHistoryUnsafe();
+        }
     }
 
     // 频率命令寄存器使用 0.01 Hz，模拟输出寄存器使用 0.01 Hz / 0.01 A。
@@ -1212,199 +1253,205 @@ public class ModbusRtuSlave
             Math.Min(ushort.MaxValue, scaledValue));
     }
 
-    // DataReceived 事件处理方法
-    private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    private static void SaveEnergyHistoryUnsafe()
     {
+        List<ModbusRtuSlave> slaves;
+        lock (slaveInstances)
+        {
+            slaves = slaveInstances.Values.ToList();
+        }
+
+        if (slaves.Count == 0)
+        {
+            return;
+        }
+
+        KeyValuePair<byte, double>[] energyByAddress = slaves
+            .Select(slave => new KeyValuePair<byte, double>(
+                slave.slaveAddress,
+                slave.GetAccumulatedEnergyKwh()))
+            .ToArray();
+
         try
         {
-            // 检查串口是否已打开
-            if (!serialPort.IsOpen)
-            {
-                Console.WriteLine("Serial port is not open.");
-                return;
-            }
-
-            // 确保串口缓冲区有足够的数据
-            int bytesToRead = serialPort.BytesToRead;
-            if (bytesToRead < 8)
-            {
-                Console.WriteLine($"Not enough data available. Expected 8 bytes, got {bytesToRead} bytes.");
-                return;
-            }
-
-            byte[] request = new byte[8];
-            serialPort.Read(request, 0, 8);  // 从串口读取8字节数据
-
-            // 打印接收到的字节数据
-            Console.WriteLine("Received Data: " + BitConverter.ToString(request));
-
-            byte slaveAddress = request[0];  // 获取请求中的从站地址
-
-            ModbusRtuSlave slave;
-            lock (slaveInstances)
-            {
-                slaveInstances.TryGetValue(slaveAddress, out slave);
-            }
-
-            if (slave != null)
-            {
-                byte functionCode = request[1];  // 功能码
-                byte[] response = null;
-
-                // 处理 Modbus 读保持寄存器请求（功能码 0x03）
-                if (functionCode == 0x03)
-                {
-                    ushort startingAddress = (ushort)((request[2] << 8) + request[3]);
-                    ushort quantity = (ushort)((request[4] << 8) + request[5]);
-
-                    // 处理该从站的保持寄存器读取请求
-                    response = slave.HandleReadHoldingRegisters(startingAddress, quantity);
-                }
-                // 处理 Modbus 写单个寄存器请求（功能码 0x06）
-                else if (functionCode == 0x06)
-                {
-                    ushort registerAddress = (ushort)((request[2] << 8) + request[3]);
-                    ushort registerValue = (ushort)((request[4] << 8) + request[5]);
-
-                    // 处理写单个寄存器
-                    response = slave.HandleWriteSingleRegister(registerAddress, registerValue);
-                }
-
-                if (response != null)
-                {
-                    serialPort.Write(response, 0, response.Length);
-                    Console.WriteLine("Sent response: " + BitConverter.ToString(response));
-                }
-            }
-        }
-        catch (IOException ioEx)
-        {
-            Console.WriteLine("IOException: " + ioEx.Message);
+            EnergyHistoryStore.Save(energyByAddress);
+            lastEnergyHistorySaveSeconds =
+                energyHistorySaveClock.Elapsed.TotalSeconds;
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Exception: " + ex.Message);
+            LogHelper.Logger.Error(
+                ex,
+                "保存累计功耗历史文件失败：{0}",
+                EnergyHistoryStore.FilePath);
         }
     }
 
-    // 处理读保持寄存器（功能码 0x03）
+    private static void OnApplicationExit(
+        object sender,
+        EventArgs e)
+    {
+        try
+        {
+            Stop();
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Logger.Warn(
+                ex,
+                "关闭 Modbus RTU 串口服务时出现异常。");
+        }
+        finally
+        {
+            SaveEnergyHistory();
+        }
+    }
+
+    private static byte[] ProcessRequestFrame(byte[] request)
+    {
+        if (request == null ||
+            request.Length != ModbusRtuProtocol.RequestFrameLength ||
+            !ModbusRtuProtocol.HasValidCrc(request))
+        {
+            return null;
+        }
+
+        byte address = request[0];
+        byte functionCode = request[1];
+
+        ModbusRtuSlave slave;
+        lock (slaveInstances)
+        {
+            slaveInstances.TryGetValue(address, out slave);
+        }
+
+        // Modbus RTU 对未配置的从站地址不应返回任何数据。
+        if (slave == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            if (functionCode == 0x03)
+            {
+                ushort startingAddress = (ushort)(
+                    (request[2] << 8) | request[3]);
+                ushort quantity = (ushort)(
+                    (request[4] << 8) | request[5]);
+                return slave.HandleReadHoldingRegisters(
+                    startingAddress,
+                    quantity);
+            }
+
+            if (functionCode == 0x06)
+            {
+                ushort registerAddress = (ushort)(
+                    (request[2] << 8) | request[3]);
+                ushort registerValue = (ushort)(
+                    (request[4] << 8) | request[5]);
+                return slave.HandleWriteSingleRegister(
+                    registerAddress,
+                    registerValue);
+            }
+
+            return CreateExceptionResponse(
+                address,
+                functionCode,
+                0x01);
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Logger.Error(
+                ex,
+                "处理 Modbus RTU 请求失败，从站：{0}，功能码：0x{1:X2}",
+                address,
+                functionCode);
+            return CreateExceptionResponse(
+                address,
+                functionCode,
+                0x04);
+        }
+    }
+
     private byte[] HandleReadHoldingRegisters(ushort startingAddress, ushort quantity)
     {
-        UpdateSimulation();
+        if (quantity == 0 || quantity > 125)
+        {
+            return CreateExceptionResponse(
+                slaveAddress,
+                0x03,
+                0x03);
+        }
 
+        int endAddressExclusive =
+            startingAddress + quantity;
+        if (startingAddress >= holdingRegisters.Length ||
+            endAddressExclusive > holdingRegisters.Length)
+        {
+            return CreateExceptionResponse(
+                slaveAddress,
+                0x03,
+                0x02);
+        }
+
+        UpdateSimulation();
         lock (stateLock)
         {
-            if (startingAddress >= holdingRegisters.Length || startingAddress + quantity > holdingRegisters.Length)
-            {
-                Console.WriteLine("Invalid register range.");
-                return null;  // 无效的寄存器地址范围
-            }
+            byte[] payload =
+                new byte[3 + 2 * quantity];
+            payload[0] = slaveAddress;
+            payload[1] = 0x03;
+            payload[2] = (byte)(2 * quantity);
 
-            byte[] response = new byte[5 + 2 * quantity]; // 响应长度：功能码 + 字节数 + 寄存器数据
-
-            response[0] = slaveAddress;  // 从站地址
-            response[1] = 0x03;  // 功能码（0x03：读取保持寄存器）
-            response[2] = (byte)(2 * quantity); // 数据字节数（每个寄存器 2 字节）
-
-            // 写入寄存器值
             for (int i = 0; i < quantity; i++)
             {
-                ushort registerValue = holdingRegisters[startingAddress + (ushort)i];
-                response[3 + 2 * i] = (byte)(registerValue >> 8);  // 高字节
-                response[4 + 2 * i] = (byte)(registerValue & 0xFF);  // 低字节
+                ushort registerValue =
+                    holdingRegisters[startingAddress + i];
+                payload[3 + 2 * i] =
+                    (byte)(registerValue >> 8);
+                payload[4 + 2 * i] =
+                    (byte)(registerValue & 0xFF);
             }
 
-            // 校验（CRC 检查）
-            byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
-            response[response.Length - 2] = crc[0];
-            response[response.Length - 1] = crc[1];
-
-            // 比较计算出的 CRC 和接收到的 CRC 是否一致
-            if (!ValidateCRC(response))
-            {
-                Console.WriteLine("CRC mismatch!");
-                return null;  // CRC 不匹配时返回 null
-            }
-
-            return response;
+            return ModbusRtuProtocol.AppendCrc(payload);
         }
     }
 
-    // 处理写单个保持寄存器（功能码 0x06）
     private byte[] HandleWriteSingleRegister(ushort registerAddress, ushort registerValue)
     {
         if (registerAddress >= holdingRegisters.Length)
         {
-            Console.WriteLine("Invalid register address.");
-            return null;  // 无效的寄存器地址
-        }
-
-        byte[] response = new byte[8]; // 响应长度：从站地址 + 功能码 + 寄存器地址 + 寄存器值 + CRC
-
-        response[0] = slaveAddress;  // 从站地址
-        response[1] = 0x06;  // 功能码（0x06：写单个寄存器）
-        response[2] = (byte)(registerAddress >> 8);  // 寄存器地址高字节
-        response[3] = (byte)(registerAddress & 0xFF);  // 寄存器地址低字节
-        Console.WriteLine(">>registerValue:" + registerValue.ToString());
-        response[4] = (byte)(registerValue >> 8);  // 寄存器值高字节
-        Console.WriteLine(">>response[4]:" + response[4].ToString());
-        response[5] = (byte)(registerValue & 0xFF);  // 寄存器值低字节
-        Console.WriteLine(">>response[5]:" + response[5].ToString());
-
-        // 校验（CRC 检查）
-        byte[] crc = CalculateCRC(response.Take(response.Length - 2).ToArray()); // CRC 检查
-        response[response.Length - 2] = crc[0];
-        response[response.Length - 1] = crc[1];
-
-        // 比较计算出的 CRC 和接收到的 CRC 是否一致
-        if (!ValidateCRC(response))
-        {
-            Console.WriteLine("CRC mismatch!");
-            return null;  // CRC 不匹配时返回 null
+            return CreateExceptionResponse(
+                slaveAddress,
+                0x06,
+                0x02);
         }
 
         SetHoldingRegister(registerAddress, registerValue);
 
-        return response;
+        byte[] payload = new byte[6];
+        payload[0] = slaveAddress;
+        payload[1] = 0x06;
+        payload[2] = (byte)(registerAddress >> 8);
+        payload[3] = (byte)(registerAddress & 0xFF);
+        payload[4] = (byte)(registerValue >> 8);
+        payload[5] = (byte)(registerValue & 0xFF);
+        return ModbusRtuProtocol.AppendCrc(payload);
     }
 
-    // CRC 校验方法（假设使用的是 Modbus CRC16）
-    private byte[] CalculateCRC(byte[] data)
+    private static byte[] CreateExceptionResponse(
+        byte address,
+        byte functionCode,
+        byte exceptionCode)
     {
-        ushort crc = 0xFFFF;
-
-        foreach (byte byteData in data)
+        byte[] payload =
         {
-            crc ^= byteData;
-
-            for (int i = 0; i < 8; i++)
-            {
-                if ((crc & 0x0001) != 0)
-                {
-                    crc >>= 1;
-                    crc ^= 0xA001;
-                }
-                else
-                {
-                    crc >>= 1;
-                }
-            }
-        }
-
-        return new byte[] { (byte)(crc & 0xFF), (byte)((crc >> 8) & 0xFF) };
-    }
-
-    // 校验计算出来的 CRC 是否和响应中的 CRC 一致
-    private bool ValidateCRC(byte[] response)
-    {
-        // 提取响应中存储的 CRC 值
-        byte[] receivedCRC = new byte[] { response[response.Length - 2], response[response.Length - 1] };
-
-        // 计算实际的 CRC 值
-        byte[] calculatedCRC = CalculateCRC(response.Take(response.Length - 2).ToArray());
-
-        // 比较计算出的 CRC 和响应中的 CRC
-        return receivedCRC.SequenceEqual(calculatedCRC);
+            address,
+            (byte)(functionCode | 0x80),
+            exceptionCode
+        };
+        return ModbusRtuProtocol.AppendCrc(payload);
     }
 }
 
