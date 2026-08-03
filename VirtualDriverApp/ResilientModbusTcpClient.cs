@@ -358,11 +358,16 @@ public sealed class ResilientModbusTcpClient : IDisposable
             SetState(ModbusTcpConnectionState.Connected);
             return client;
         }
-        catch
+        catch (Exception ex)
         {
             newClient.Dispose();
             SetState(ModbusTcpConnectionState.Faulted);
-            throw;
+            throw new IOException(
+                string.Format(
+                    "{0} 无法连接到 {1}。",
+                    deviceName,
+                    endpoint),
+                ex);
         }
     }
 

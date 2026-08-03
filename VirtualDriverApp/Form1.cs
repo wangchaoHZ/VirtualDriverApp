@@ -197,8 +197,13 @@ namespace VirtualDriverApp
             timer3.Enabled = false;
             _lifetimeSource.Cancel();
 
-            _ai01Client.Dispose();
-            _ai02Client.Dispose();
+            AiClientSession aiSession =
+                DetachAiClientSession();
+            if (aiSession != null)
+            {
+                aiSession.Dispose();
+            }
+
             _doClient.Dispose();
             _diClient.Dispose();
 
@@ -211,20 +216,14 @@ namespace VirtualDriverApp
         }
 
         private const byte AI01_ModbusClient_ID = 5;
+        private const byte AI02_ModbusClient_ID = 6;
         private const byte DO_ModbusClient_ID = 2;
         private const byte DI_ModbusClient_ID = 3;
         private const int DiDataMaximumAgeSeconds = 5;
 
-        private readonly ResilientModbusTcpClient _ai01Client =
-            new ResilientModbusTcpClient(
-                "AI01",
-                "192.168.1.133",
-                ModbusEndianness.BigEndian);
-        private readonly ResilientModbusTcpClient _ai02Client =
-            new ResilientModbusTcpClient(
-                "AI02",
-                "192.168.1.134",
-                ModbusEndianness.BigEndian);
+        private const string AI01_Endpoint = "192.168.1.133";
+        private const string AI02_Endpoint = "192.168.1.134";
+
         private readonly ResilientModbusTcpClient _doClient =
             new ResilientModbusTcpClient(
                 "DO",
@@ -238,6 +237,51 @@ namespace VirtualDriverApp
         private readonly CancellationTokenSource _lifetimeSource =
             new CancellationTokenSource();
         private readonly object _diStateLock = new object();
+        private readonly object _aiSessionLock = new object();
+
+        private AiClientSession _aiSession;
+
+        private sealed class AiClientSession : IDisposable
+        {
+            private int _disposeStarted;
+
+            public AiClientSession(
+                CancellationToken applicationCancellationToken)
+            {
+                CancellationSource =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        applicationCancellationToken);
+                AI01 = new ResilientModbusTcpClient(
+                    "AI01",
+                    AI01_Endpoint,
+                    ModbusEndianness.BigEndian);
+                AI02 = new ResilientModbusTcpClient(
+                    "AI02",
+                    AI02_Endpoint,
+                    ModbusEndianness.BigEndian);
+            }
+
+            public ResilientModbusTcpClient AI01 { get; }
+
+            public ResilientModbusTcpClient AI02 { get; }
+
+            public CancellationTokenSource CancellationSource { get; }
+
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(
+                    ref _disposeStarted,
+                    1) != 0)
+                {
+                    return;
+                }
+
+                CancellationSource.Cancel();
+                AI01.Dispose();
+                AI02.Dispose();
+                CancellationSource.Dispose();
+            }
+        }
 
         // 创建四个从站实例，分别为地址11、22、33、44
         ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
@@ -265,6 +309,7 @@ namespace VirtualDriverApp
         {
             label10.ForeColor = Color.Black;
             label10.Text = "未启动";
+            checkBox17.Checked = false;
             LogHelper.Logger.Info("Application started at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
             PN1_PRESS_DIFF = 0.0;
@@ -319,10 +364,8 @@ namespace VirtualDriverApp
                 CancellationToken cancellationToken =
                     _lifetimeSource.Token;
 
-                // 四个设备并行建立连接，每个连接均有显式超时和重试。
+                // DO、DI 是基础设备；AI01、AI02 由 checkBox17 动态启用。
                 await Task.WhenAll(
-                    _ai01Client.ConnectAsync(cancellationToken),
-                    _ai02Client.ConnectAsync(cancellationToken),
                     _doClient.ConnectAsync(cancellationToken),
                     _diClient.ConnectAsync(cancellationToken));
 
@@ -359,6 +402,11 @@ namespace VirtualDriverApp
 
                 ModbusRtuSlave.Start();
                 _systemStarted = true;
+
+                if (checkBox17.Checked)
+                {
+                    await EnableAiCommunicationAsync();
+                }
 
                 button1.ForeColor = Color.Green;
                 label10.ForeColor = Color.Green;
@@ -403,10 +451,147 @@ namespace VirtualDriverApp
 
         private void DisconnectAllTcpClients()
         {
-            _ai01Client.Disconnect();
-            _ai02Client.Disconnect();
+            AiClientSession aiSession =
+                DetachAiClientSession();
+            if (aiSession != null)
+            {
+                aiSession.Dispose();
+            }
+
             _doClient.Disconnect();
             _diClient.Disconnect();
+        }
+
+        private AiClientSession GetAiClientSession()
+        {
+            lock (_aiSessionLock)
+            {
+                return _aiSession;
+            }
+        }
+
+        private AiClientSession GetOrCreateAiClientSession()
+        {
+            lock (_aiSessionLock)
+            {
+                if (_aiSession == null)
+                {
+                    _aiSession = new AiClientSession(
+                        _lifetimeSource.Token);
+                    LogHelper.Logger.Info(
+                        "AI 动态通信已创建：AI01={0}，AI02={1}。",
+                        AI01_Endpoint,
+                        AI02_Endpoint);
+                }
+
+                return _aiSession;
+            }
+        }
+
+        private AiClientSession DetachAiClientSession()
+        {
+            lock (_aiSessionLock)
+            {
+                AiClientSession aiSession = _aiSession;
+                _aiSession = null;
+                return aiSession;
+            }
+        }
+
+        private async Task EnableAiCommunicationAsync()
+        {
+            if (!_systemStarted ||
+                _isShuttingDown ||
+                !checkBox17.Checked)
+            {
+                return;
+            }
+
+            AiClientSession aiSession =
+                GetOrCreateAiClientSession();
+
+            try
+            {
+                label10.ForeColor = Color.DarkOrange;
+                label10.Text = "AI设备连接中...";
+
+                CancellationToken cancellationToken =
+                    aiSession.CancellationSource.Token;
+                await Task.WhenAll(
+                    aiSession.AI01.ConnectAsync(cancellationToken),
+                    aiSession.AI02.ConnectAsync(cancellationToken));
+
+                if (ReferenceEquals(
+                    GetAiClientSession(),
+                    aiSession) &&
+                    checkBox17.Checked)
+                {
+                    label10.ForeColor = Color.Green;
+                    label10.Text = "运行中";
+                    LogHelper.Logger.Info(
+                        "AI01、AI02 动态通信连接成功。");
+                }
+            }
+            catch (OperationCanceledException)
+                when (aiSession.CancellationSource
+                    .IsCancellationRequested)
+            {
+                // 取消勾选或程序退出时的正常结束。
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Logger.Warn(
+                    ex,
+                    "AI01、AI02 动态连接失败；保持使能状态并在后续发送时自动重连。");
+
+                if (ReferenceEquals(
+                    GetAiClientSession(),
+                    aiSession) &&
+                    checkBox17.Checked)
+                {
+                    label10.ForeColor = Color.DarkOrange;
+                    label10.Text = "AI通信恢复中...";
+                }
+            }
+        }
+
+        private async Task DisableAiCommunicationAsync()
+        {
+            AiClientSession aiSession =
+                DetachAiClientSession();
+            if (aiSession == null)
+            {
+                return;
+            }
+
+            aiSession.CancellationSource.Cancel();
+            await Task.Run(() => aiSession.Dispose());
+            LogHelper.Logger.Info(
+                "AI 动态通信已关闭，AI01、AI02 连接已释放。");
+        }
+
+        private async void checkBox17_CheckedChanged(
+            object sender,
+            EventArgs e)
+        {
+            if (!_systemStarted || _isShuttingDown)
+            {
+                return;
+            }
+
+            if (checkBox17.Checked)
+            {
+                await EnableAiCommunicationAsync();
+            }
+            else
+            {
+                await DisableAiCommunicationAsync();
+                if (!_isShuttingDown)
+                {
+                    label10.ForeColor = Color.Green;
+                    label10.Text = "运行中（AI关闭）";
+                }
+            }
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -437,18 +622,29 @@ namespace VirtualDriverApp
                 return;
             }
 
-            ModbusTcpHealthSnapshot[] snapshots =
+            List<ModbusTcpHealthSnapshot> snapshots =
+                new List<ModbusTcpHealthSnapshot>
             {
-                _ai01Client.GetHealthSnapshot(),
-                _ai02Client.GetHealthSnapshot(),
                 _doClient.GetHealthSnapshot(),
                 _diClient.GetHealthSnapshot()
             };
 
+            bool aiRequested = checkBox17.Checked;
+            AiClientSession aiSession =
+                GetAiClientSession();
+            if (aiRequested && aiSession != null)
+            {
+                snapshots.Add(
+                    aiSession.AI01.GetHealthSnapshot());
+                snapshots.Add(
+                    aiSession.AI02.GetHealthSnapshot());
+            }
+
             bool isRecovering = snapshots.Any(
                 snapshot =>
                     snapshot.State !=
-                    ModbusTcpConnectionState.Connected);
+                    ModbusTcpConnectionState.Connected) ||
+                (aiRequested && aiSession == null);
 
             label10.ForeColor =
                 isRecovering
@@ -457,7 +653,9 @@ namespace VirtualDriverApp
             label10.Text =
                 isRecovering
                     ? "通信恢复中..."
-                    : "运行中";
+                    : aiRequested
+                        ? "运行中"
+                        : "运行中（AI关闭）";
         }
 
         private static void ApplyCurrentFault(
@@ -708,25 +906,45 @@ namespace VirtualDriverApp
                     H2_SET,
                 };
 
-                try
+                AiClientSession aiSession =
+                    GetAiClientSession();
+                if (checkBox17.Checked &&
+                    aiSession != null)
                 {
-                    await _ai01Client.ExecuteAsync(
-                        "写入 AI01 模拟量",
-                        activeClient =>
-                            activeClient.WriteMultipleRegisters(
-                                AI01_ModbusClient_ID,
-                                startAddress,
-                                values),
-                        _lifetimeSource.Token);
-                }
-                catch (OperationCanceledException)
-                    when (_isShuttingDown)
-                {
-                    return;
-                }
-                catch (ModbusTcpCommunicationException)
-                {
-                    // 连接管理器已经限频记录，并将在下一次操作时自动重连。
+                    try
+                    {
+                        CancellationToken aiCancellationToken =
+                            aiSession.CancellationSource.Token;
+                        await Task.WhenAll(
+                            aiSession.AI01.ExecuteAsync(
+                                "写入 AI01 模拟量",
+                                activeClient =>
+                                    activeClient
+                                        .WriteMultipleRegisters(
+                                            AI01_ModbusClient_ID,
+                                            startAddress,
+                                            values),
+                                aiCancellationToken),
+                            aiSession.AI02.ExecuteAsync(
+                                "写入 AI02 模拟量",
+                                activeClient =>
+                                    activeClient
+                                        .WriteMultipleRegisters(
+                                            AI02_ModbusClient_ID,
+                                            startAddress,
+                                            values),
+                                aiCancellationToken));
+                    }
+                    catch (OperationCanceledException)
+                        when (aiSession.CancellationSource
+                            .IsCancellationRequested)
+                    {
+                        // 动态关闭 AI 或退出程序时的正常取消。
+                    }
+                    catch (ModbusTcpCommunicationException)
+                    {
+                        // 连接管理器已记录错误，下一轮发送会自动重连。
+                    }
                 }
             }
             catch (Exception exOuter)
@@ -975,7 +1193,8 @@ namespace VirtualDriverApp
 public class ModbusRtuSlave
 {
     private const double RegisterScale = 100.0;
-    private const double MaximumFrequencyHz = 60.0;
+    // 现场 7.5 kW 泵由变频器在 0~50 Hz 范围内运行。
+    private const double MaximumFrequencyHz = 50.0;
     private const double RampRateHzPerSecond = 2.5;
     private const double PowerKilowattsPerAmp = 0.42500269603871194;
     private const double RunningFrequencyThresholdHz = 0.5;
@@ -1070,6 +1289,13 @@ public class ModbusRtuSlave
         holdingRegisters = new ushort[0x3010];
         random = new Random(Environment.TickCount ^ (slaveAddress << 16));
 
+        /*
+         * 电流曲线来源：
+         * 冰山嘉德 BMS 1# 系统 2026-03-01 至 2026-03-25 实测数据，
+         * 共 414,603 行。四个地址依次对应子1正极、子1负极、
+         * 子2正极、子2负极泵。运行点和启停爬坡样本经异常值过滤后，
+         * 分别拟合 I = a*f² + b*f + c；停机时电流单独置零。
+         */
         switch (slaveAddress)
         {
             case 11:
@@ -1431,9 +1657,14 @@ public class ModbusRtuSlave
             return 0.0;
         }
 
+        double boundedFrequencyHz = Math.Min(
+            MaximumFrequencyHz,
+            frequencyHz);
         double currentA =
-            currentQuadraticCoefficient * frequencyHz * frequencyHz +
-            currentLinearCoefficient * frequencyHz +
+            currentQuadraticCoefficient *
+                boundedFrequencyHz *
+                boundedFrequencyHz +
+            currentLinearCoefficient * boundedFrequencyHz +
             currentConstantCoefficient;
 
         return Math.Max(0.0, Math.Min(30.0, currentA));

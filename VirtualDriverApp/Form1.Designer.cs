@@ -78,6 +78,7 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.label11 = new System.Windows.Forms.Label();
+            this.checkBox17 = new System.Windows.Forms.CheckBox();
             this.label12 = new System.Windows.Forms.Label();
             this.textBox10 = new System.Windows.Forms.TextBox();
             this.label13 = new System.Windows.Forms.Label();
@@ -670,12 +671,12 @@
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Font = new System.Drawing.Font("微软雅黑", 21.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label10.Font = new System.Drawing.Font("微软雅黑", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.label10.Location = new System.Drawing.Point(1656, 58);
+            this.label10.Location = new System.Drawing.Point(1651, 50);
             this.label10.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(158, 50);
+            this.label10.Size = new System.Drawing.Size(185, 58);
             this.label10.TabIndex = 11;
             this.label10.Text = "label10";
             // 
@@ -726,6 +727,20 @@
             this.label11.Size = new System.Drawing.Size(134, 31);
             this.label11.TabIndex = 16;
             this.label11.Text = "变频器端口";
+            // 
+            // checkBox17
+            // 
+            this.checkBox17.AutoSize = true;
+            this.checkBox17.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.checkBox17.ForeColor = System.Drawing.Color.Black;
+            this.checkBox17.Location = new System.Drawing.Point(2014, 500);
+            this.checkBox17.Margin = new System.Windows.Forms.Padding(5);
+            this.checkBox17.Name = "checkBox17";
+            this.checkBox17.Size = new System.Drawing.Size(228, 35);
+            this.checkBox17.TabIndex = 76;
+            this.checkBox17.Text = "启用 AI01 / AI02";
+            this.checkBox17.UseVisualStyleBackColor = true;
+            this.checkBox17.CheckedChanged += new System.EventHandler(this.checkBox17_CheckedChanged);
             // 
             // label12
             // 
@@ -1138,6 +1153,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(2476, 1348);
+            this.Controls.Add(this.checkBox17);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.label11);
             this.Controls.Add(this.comboBox1);
@@ -1252,6 +1268,7 @@
         private System.Windows.Forms.TextBox textBox24;
         private System.Windows.Forms.Label label26;
         private System.Windows.Forms.TextBox textBox23;
+        private System.Windows.Forms.CheckBox checkBox17;
     }
 }
 
