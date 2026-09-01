@@ -1533,7 +1533,6 @@ namespace VirtualDriverApp
                 _timer3Busy = false;
             }
         }
-
     }
 }
 

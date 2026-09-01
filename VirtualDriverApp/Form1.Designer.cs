@@ -669,22 +669,22 @@
             this.label9.AutoSize = true;
             this.label9.Font = new System.Drawing.Font("微软雅黑", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label9.ForeColor = System.Drawing.Color.Black;
-            this.label9.Location = new System.Drawing.Point(845, 50);
+            this.label9.Location = new System.Drawing.Point(812, 50);
             this.label9.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(597, 58);
+            this.label9.Size = new System.Drawing.Size(877, 58);
             this.label9.TabIndex = 10;
-            this.label9.Text = "储能控制系统变频器模拟终端";
+            this.label9.Text = "储能控制系统变频器模拟终端（MPC验证）";
             // 
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Font = new System.Drawing.Font("微软雅黑", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label10.Font = new System.Drawing.Font("宋体", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.label10.Location = new System.Drawing.Point(1651, 50);
+            this.label10.Location = new System.Drawing.Point(1803, 73);
             this.label10.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(184, 57);
+            this.label10.Size = new System.Drawing.Size(117, 28);
             this.label10.TabIndex = 11;
             this.label10.Text = "label10";
             // 
