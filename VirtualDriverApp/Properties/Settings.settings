@@ -3,5 +3,18 @@
   <Profiles>
     <Profile Name="(Default)" />
   </Profiles>
-  <Settings />
+  <Settings>
+    <Setting Name="ModbusTransportMode" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Rtu</Value>
+    </Setting>
+    <Setting Name="ModbusSerialPort" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ModbusTcpListenAddress" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0.0.0.0</Value>
+    </Setting>
+    <Setting Name="ModbusTcpPort" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">502</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>

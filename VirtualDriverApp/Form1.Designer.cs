@@ -76,8 +76,14 @@
             this.label10 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.comboBoxModbusMode = new System.Windows.Forms.ComboBox();
+            this.labelModbusMode = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.label11 = new System.Windows.Forms.Label();
+            this.textBoxTcpListenAddress = new System.Windows.Forms.TextBox();
+            this.labelTcpListenAddress = new System.Windows.Forms.Label();
+            this.numericUpDownTcpPort = new System.Windows.Forms.NumericUpDown();
+            this.labelTcpPort = new System.Windows.Forms.Label();
             this.checkBox17 = new System.Windows.Forms.CheckBox();
             this.label12 = new System.Windows.Forms.Label();
             this.textBox10 = new System.Windows.Forms.TextBox();
@@ -110,11 +116,13 @@
             this.textBox20 = new System.Windows.Forms.TextBox();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.timer3 = new System.Windows.Forms.Timer(this.components);
+            this.label28 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTcpPort)).BeginInit();
             this.groupBox5.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -676,7 +684,7 @@
             this.label10.Location = new System.Drawing.Point(1651, 50);
             this.label10.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(185, 58);
+            this.label10.Size = new System.Drawing.Size(184, 57);
             this.label10.TabIndex = 11;
             this.label10.Text = "label10";
             // 
@@ -704,6 +712,32 @@
             this.pictureBox1.TabIndex = 14;
             this.pictureBox1.TabStop = false;
             // 
+            // comboBoxModbusMode
+            // 
+            this.comboBoxModbusMode.BackColor = System.Drawing.Color.White;
+            this.comboBoxModbusMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxModbusMode.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.comboBoxModbusMode.ForeColor = System.Drawing.Color.Black;
+            this.comboBoxModbusMode.FormattingEnabled = true;
+            this.comboBoxModbusMode.Location = new System.Drawing.Point(2214, 160);
+            this.comboBoxModbusMode.Margin = new System.Windows.Forms.Padding(5);
+            this.comboBoxModbusMode.Name = "comboBoxModbusMode";
+            this.comboBoxModbusMode.Size = new System.Drawing.Size(229, 32);
+            this.comboBoxModbusMode.TabIndex = 77;
+            this.comboBoxModbusMode.SelectedIndexChanged += new System.EventHandler(this.comboBoxModbusMode_SelectedIndexChanged);
+            // 
+            // labelModbusMode
+            // 
+            this.labelModbusMode.AutoSize = true;
+            this.labelModbusMode.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelModbusMode.ForeColor = System.Drawing.Color.Black;
+            this.labelModbusMode.Location = new System.Drawing.Point(2014, 160);
+            this.labelModbusMode.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.labelModbusMode.Name = "labelModbusMode";
+            this.labelModbusMode.Size = new System.Drawing.Size(110, 31);
+            this.labelModbusMode.TabIndex = 78;
+            this.labelModbusMode.Text = "通信模式";
+            // 
             // comboBox1
             // 
             this.comboBox1.BackColor = System.Drawing.Color.White;
@@ -727,6 +761,64 @@
             this.label11.Size = new System.Drawing.Size(134, 31);
             this.label11.TabIndex = 16;
             this.label11.Text = "变频器端口";
+            // 
+            // textBoxTcpListenAddress
+            // 
+            this.textBoxTcpListenAddress.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBoxTcpListenAddress.Location = new System.Drawing.Point(2117, 220);
+            this.textBoxTcpListenAddress.Margin = new System.Windows.Forms.Padding(5);
+            this.textBoxTcpListenAddress.Name = "textBoxTcpListenAddress";
+            this.textBoxTcpListenAddress.Size = new System.Drawing.Size(174, 31);
+            this.textBoxTcpListenAddress.TabIndex = 79;
+            this.textBoxTcpListenAddress.Text = "0.0.0.0";
+            // 
+            // labelTcpListenAddress
+            // 
+            this.labelTcpListenAddress.AutoSize = true;
+            this.labelTcpListenAddress.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelTcpListenAddress.ForeColor = System.Drawing.Color.Black;
+            this.labelTcpListenAddress.Location = new System.Drawing.Point(2014, 221);
+            this.labelTcpListenAddress.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.labelTcpListenAddress.Name = "labelTcpListenAddress";
+            this.labelTcpListenAddress.Size = new System.Drawing.Size(78, 27);
+            this.labelTcpListenAddress.TabIndex = 80;
+            this.labelTcpListenAddress.Text = "监听 IP";
+            // 
+            // numericUpDownTcpPort
+            // 
+            this.numericUpDownTcpPort.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.numericUpDownTcpPort.Location = new System.Drawing.Point(2371, 220);
+            this.numericUpDownTcpPort.Margin = new System.Windows.Forms.Padding(5);
+            this.numericUpDownTcpPort.Maximum = new decimal(new int[] {
+            65535,
+            0,
+            0,
+            0});
+            this.numericUpDownTcpPort.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownTcpPort.Name = "numericUpDownTcpPort";
+            this.numericUpDownTcpPort.Size = new System.Drawing.Size(82, 31);
+            this.numericUpDownTcpPort.TabIndex = 81;
+            this.numericUpDownTcpPort.Value = new decimal(new int[] {
+            502,
+            0,
+            0,
+            0});
+            // 
+            // labelTcpPort
+            // 
+            this.labelTcpPort.AutoSize = true;
+            this.labelTcpPort.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelTcpPort.ForeColor = System.Drawing.Color.Black;
+            this.labelTcpPort.Location = new System.Drawing.Point(2300, 221);
+            this.labelTcpPort.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.labelTcpPort.Name = "labelTcpPort";
+            this.labelTcpPort.Size = new System.Drawing.Size(52, 27);
+            this.labelTcpPort.TabIndex = 82;
+            this.labelTcpPort.Text = "端口";
             // 
             // checkBox17
             // 
@@ -1147,16 +1239,33 @@
             this.timer3.Interval = 10000;
             this.timer3.Tick += new System.EventHandler(this.timer3_Tick);
             // 
+            // label28
+            // 
+            this.label28.AutoSize = true;
+            this.label28.Font = new System.Drawing.Font("宋体", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label28.Location = new System.Drawing.Point(2015, 553);
+            this.label28.Name = "label28";
+            this.label28.Size = new System.Drawing.Size(305, 28);
+            this.label28.TabIndex = 83;
+            this.label28.Text = "频率地给定址：0x2001";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(2476, 1348);
+            this.Controls.Add(this.label28);
             this.Controls.Add(this.checkBox17);
             this.Controls.Add(this.label10);
+            this.Controls.Add(this.labelTcpPort);
+            this.Controls.Add(this.numericUpDownTcpPort);
+            this.Controls.Add(this.labelTcpListenAddress);
+            this.Controls.Add(this.textBoxTcpListenAddress);
             this.Controls.Add(this.label11);
             this.Controls.Add(this.comboBox1);
+            this.Controls.Add(this.labelModbusMode);
+            this.Controls.Add(this.comboBoxModbusMode);
             this.Controls.Add(this.pictureBox1);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.label9);
@@ -1180,6 +1289,7 @@
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTcpPort)).EndInit();
             this.groupBox5.ResumeLayout(false);
             this.groupBox5.PerformLayout();
             this.ResumeLayout(false);
@@ -1223,8 +1333,14 @@
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.ComboBox comboBoxModbusMode;
+        private System.Windows.Forms.Label labelModbusMode;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.TextBox textBoxTcpListenAddress;
+        private System.Windows.Forms.Label labelTcpListenAddress;
+        private System.Windows.Forms.NumericUpDown numericUpDownTcpPort;
+        private System.Windows.Forms.Label labelTcpPort;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.TextBox textBox10;
         private System.Windows.Forms.Label label13;
@@ -1269,6 +1385,7 @@
         private System.Windows.Forms.Label label26;
         private System.Windows.Forms.TextBox textBox23;
         private System.Windows.Forms.CheckBox checkBox17;
+        private System.Windows.Forms.Label label28;
     }
 }
 

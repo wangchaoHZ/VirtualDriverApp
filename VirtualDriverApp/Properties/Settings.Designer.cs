@@ -26,5 +26,65 @@ namespace VirtualDriverApp.Properties
                 return defaultInstance;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Rtu")]
+        public string ModbusTransportMode
+        {
+            get
+            {
+                return ((string)(this["ModbusTransportMode"]));
+            }
+            set
+            {
+                this["ModbusTransportMode"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ModbusSerialPort
+        {
+            get
+            {
+                return ((string)(this["ModbusSerialPort"]));
+            }
+            set
+            {
+                this["ModbusSerialPort"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.0.0.0")]
+        public string ModbusTcpListenAddress
+        {
+            get
+            {
+                return ((string)(this["ModbusTcpListenAddress"]));
+            }
+            set
+            {
+                this["ModbusTcpListenAddress"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("502")]
+        public int ModbusTcpPort
+        {
+            get
+            {
+                return ((int)(this["ModbusTcpPort"]));
+            }
+            set
+            {
+                this["ModbusTcpPort"] = value;
+            }
+        }
     }
 }

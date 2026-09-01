@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -26,6 +27,15 @@ namespace VirtualDriverApp
 
         public Form1()
         {
+            slave1 = new ModbusRtuSlave(11);
+            slave2 = new ModbusRtuSlave(22);
+            slave3 = new ModbusRtuSlave(33);
+            slave4 = new ModbusRtuSlave(44);
+            _modbusDataStore = new VirtualModbusDataStore(
+                new[] { slave1, slave2, slave3, slave4 });
+            _modbusServer = new SwitchableModbusServer(
+                _modbusDataStore);
+
             InitializeComponent();
 
             // 设置窗体启动时自动居中
@@ -206,6 +216,16 @@ namespace VirtualDriverApp
 
             _doClient.Dispose();
             _diClient.Dispose();
+            try
+            {
+                _modbusServer.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Logger.Warn(
+                    ex,
+                    "关闭 Modbus 模拟服务端时出现异常。");
+            }
 
             foreach (Font font in _responsiveFonts.Values)
             {
@@ -220,6 +240,8 @@ namespace VirtualDriverApp
         private const byte DO_ModbusClient_ID = 2;
         private const byte DI_ModbusClient_ID = 3;
         private const int DiDataMaximumAgeSeconds = 5;
+        private const string ModbusRtuModeDisplayName = "Modbus RTU";
+        private const string ModbusTcpModeDisplayName = "Modbus TCP";
 
         private const string AI01_Endpoint = "192.168.1.133";
         private const string AI02_Endpoint = "192.168.1.134";
@@ -283,11 +305,15 @@ namespace VirtualDriverApp
             }
         }
 
-        // 创建四个从站实例，分别为地址11、22、33、44
-        ModbusRtuSlave slave1 = new ModbusRtuSlave(11);
-        ModbusRtuSlave slave2 = new ModbusRtuSlave(22);
-        ModbusRtuSlave slave3 = new ModbusRtuSlave(33);
-        ModbusRtuSlave slave4 = new ModbusRtuSlave(44);
+        // 四个模拟从站共用同一数据层，由 RTU/TCP 服务端适配器访问。
+        private readonly ModbusRtuSlave slave1;
+        private readonly ModbusRtuSlave slave2;
+        private readonly ModbusRtuSlave slave3;
+        private readonly ModbusRtuSlave slave4;
+        private readonly VirtualModbusDataStore _modbusDataStore;
+        private readonly SwitchableModbusServer _modbusServer;
+        private ModbusServerConfiguration
+            _activeModbusServerConfiguration;
 
         private double PN1_PRESS_DIFF;
         private double PN2_PRESS_DIFF;
@@ -333,11 +359,41 @@ namespace VirtualDriverApp
                 comboBox1.Items.Add(port);  // 添加串口名称到 ComboBox
             }
 
-            // 如果有可用串口，默认选择第一个串口
-            if (comboBox1.Items.Count > 0)
+            string savedSerialPort =
+                Properties.Settings.Default.ModbusSerialPort;
+            if (!string.IsNullOrWhiteSpace(savedSerialPort) &&
+                comboBox1.Items.Contains(savedSerialPort))
+            {
+                comboBox1.SelectedItem = savedSerialPort;
+            }
+            else if (comboBox1.Items.Count > 0)
             {
                 comboBox1.SelectedIndex = 0;
             }
+
+            comboBoxModbusMode.Items.Clear();
+            comboBoxModbusMode.Items.Add(ModbusRtuModeDisplayName);
+            comboBoxModbusMode.Items.Add(ModbusTcpModeDisplayName);
+            comboBoxModbusMode.SelectedIndex = string.Equals(
+                Properties.Settings.Default.ModbusTransportMode,
+                ModbusTransportMode.Tcp.ToString(),
+                StringComparison.OrdinalIgnoreCase)
+                    ? 1
+                    : 0;
+            textBoxTcpListenAddress.Text = string.IsNullOrWhiteSpace(
+                Properties.Settings.Default.ModbusTcpListenAddress)
+                    ? IPAddress.Any.ToString()
+                    : Properties.Settings.Default
+                        .ModbusTcpListenAddress;
+
+            int savedTcpPort =
+                Properties.Settings.Default.ModbusTcpPort;
+            numericUpDownTcpPort.Value = Math.Max(
+                numericUpDownTcpPort.Minimum,
+                Math.Min(
+                    numericUpDownTcpPort.Maximum,
+                    savedTcpPort));
+            UpdateModbusConfigurationControls();
 
             // 为每个从站设置保持寄存器的初始值
             slave1.SetHoldingRegister(0, 0);  // 设置从站11的寄存器0初始值
@@ -349,8 +405,14 @@ namespace VirtualDriverApp
         // 修改为异步，避免在 UI 线程同步阻塞 Connect 和 Sleep
         private async void button1_Click(object sender, EventArgs e)
         {
-            if (_systemStarted || _isShuttingDown)
+            if (_isShuttingDown)
             {
+                return;
+            }
+
+            if (_systemStarted)
+            {
+                await SwitchModbusServerAsync();
                 return;
             }
 
@@ -360,7 +422,8 @@ namespace VirtualDriverApp
 
             try
             {
-                string selectedPort = comboBox1.SelectedItem?.ToString();
+                ModbusServerConfiguration serverConfiguration =
+                    BuildModbusServerConfiguration();
                 CancellationToken cancellationToken =
                     _lifetimeSource.Token;
 
@@ -368,15 +431,6 @@ namespace VirtualDriverApp
                 await Task.WhenAll(
                     _doClient.ConnectAsync(cancellationToken),
                     _diClient.ConnectAsync(cancellationToken));
-
-                await Task.Run(
-                    () => ModbusRtuSlave.SetSerialPortSettings(
-                        selectedPort,
-                        9600,
-                        Parity.None,
-                        8,
-                        StopBits.One),
-                    cancellationToken);
 
                 // 保留原有的四次 DO 初始化写入行为。
                 for (int writeIndex = 0;
@@ -400,8 +454,15 @@ namespace VirtualDriverApp
                     }
                 }
 
-                ModbusRtuSlave.Start();
+                await Task.Run(
+                    () => _modbusServer.Start(
+                        serverConfiguration),
+                    cancellationToken);
+                _activeModbusServerConfiguration =
+                    serverConfiguration;
                 _systemStarted = true;
+                SaveModbusServerConfiguration(
+                    serverConfiguration);
 
                 if (checkBox17.Checked)
                 {
@@ -409,8 +470,9 @@ namespace VirtualDriverApp
                 }
 
                 button1.ForeColor = Color.Green;
+                button1.Text = "应用通信配置";
                 label10.ForeColor = Color.Green;
-                label10.Text = "运行中";
+                label10.Text = GetRunningStatusText("运行中");
 
                 // 直接启用定时器（不要再用 Thread.Sleep 阻塞 UI）
                 timer1.Enabled = true;
@@ -426,16 +488,18 @@ namespace VirtualDriverApp
             {
                 try
                 {
-                    ModbusRtuSlave.Stop();
+                    _modbusServer.Stop();
                 }
                 catch (Exception stopException)
                 {
                     LogHelper.Logger.Warn(
                         stopException,
-                        "启动失败后关闭串口服务时出现异常。");
+                        "启动失败后关闭 Modbus 模拟服务端时出现异常。");
                 }
 
                 DisconnectAllTcpClients();
+                _activeModbusServerConfiguration = null;
+                SetModbusConfigurationEnabled(true);
                 label10.ForeColor = Color.Red;
                 label10.Text = "连接失败";
                 LogHelper.Logger.Error(ex, "启动连接失败");
@@ -443,10 +507,291 @@ namespace VirtualDriverApp
             }
             finally
             {
-                button1.Enabled =
-                    !_systemStarted &&
-                    !_isShuttingDown;
+                button1.Enabled = !_isShuttingDown;
             }
+        }
+
+        private async Task SwitchModbusServerAsync()
+        {
+            button1.Enabled = false;
+            SetModbusConfigurationEnabled(false);
+
+            ModbusServerConfiguration previousConfiguration =
+                _activeModbusServerConfiguration;
+
+            try
+            {
+                ModbusServerConfiguration newConfiguration =
+                    BuildModbusServerConfiguration();
+                if (_modbusServer.IsRunning &&
+                    AreEquivalentModbusConfigurations(
+                        previousConfiguration,
+                        newConfiguration))
+                {
+                    label10.ForeColor = Color.Green;
+                    label10.Text = GetRunningStatusText("运行中");
+                    return;
+                }
+
+                label10.ForeColor = Color.DarkOrange;
+                label10.Text = "正在切换 Modbus 服务端...";
+
+                await Task.Run(
+                    () => _modbusServer.Start(newConfiguration),
+                    _lifetimeSource.Token);
+
+                _activeModbusServerConfiguration =
+                    newConfiguration;
+                SaveModbusServerConfiguration(newConfiguration);
+                label10.ForeColor = Color.Green;
+                label10.Text = GetRunningStatusText("运行中");
+                LogHelper.Logger.Info(
+                    "Modbus 模拟服务端已切换：{0}。",
+                    _modbusServer.EndpointDescription);
+            }
+            catch (OperationCanceledException)
+                when (_isShuttingDown)
+            {
+                // 程序退出时的正常取消。
+            }
+            catch (Exception switchException)
+            {
+                bool rollbackSucceeded = false;
+                Exception rollbackException = null;
+
+                if (previousConfiguration != null &&
+                    !_isShuttingDown)
+                {
+                    try
+                    {
+                        await Task.Run(
+                            () => _modbusServer.Start(
+                                previousConfiguration),
+                            _lifetimeSource.Token);
+                        _activeModbusServerConfiguration =
+                            previousConfiguration;
+                        ApplyModbusConfigurationToControls(
+                            previousConfiguration);
+                        rollbackSucceeded = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        rollbackException = ex;
+                    }
+                }
+
+                LogHelper.Logger.Error(
+                    switchException,
+                    "切换 Modbus 模拟服务端失败。回退结果：{0}",
+                    rollbackSucceeded ? "成功" : "失败");
+                if (rollbackException != null)
+                {
+                    LogHelper.Logger.Error(
+                        rollbackException,
+                        "回退到上一个 Modbus 服务端配置失败。");
+                }
+
+                if (!rollbackSucceeded)
+                {
+                    _activeModbusServerConfiguration = null;
+                }
+
+                label10.ForeColor = rollbackSucceeded
+                    ? Color.DarkOrange
+                    : Color.Red;
+                label10.Text = rollbackSucceeded
+                    ? GetRunningStatusText("切换失败，已回退")
+                    : "Modbus 服务端切换及回退均失败";
+                MessageBox.Show(
+                    rollbackSucceeded
+                        ? string.Format(
+                            "切换通信模式失败，已恢复原配置：{0}",
+                            switchException.Message)
+                        : string.Format(
+                            "切换通信模式失败，且无法恢复原配置：{0}",
+                            switchException.Message),
+                    "Modbus 模式切换失败",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                SetModbusConfigurationEnabled(true);
+                button1.Enabled = !_isShuttingDown;
+            }
+        }
+
+        private ModbusServerConfiguration
+            BuildModbusServerConfiguration()
+        {
+            if (SelectedModbusTransportMode ==
+                ModbusTransportMode.Rtu)
+            {
+                string selectedPort =
+                    comboBox1.SelectedItem?.ToString();
+                return new ModbusRtuServerConfiguration(
+                    selectedPort,
+                    9600,
+                    Parity.None,
+                    8,
+                    StopBits.One);
+            }
+
+            IPAddress listenAddress;
+            if (!IPAddress.TryParse(
+                textBoxTcpListenAddress.Text.Trim(),
+                out listenAddress))
+            {
+                throw new ArgumentException(
+                    "TCP 监听 IP 地址格式无效。");
+            }
+
+            return new ModbusTcpServerConfiguration(
+                listenAddress,
+                Decimal.ToInt32(numericUpDownTcpPort.Value));
+        }
+
+        private ModbusTransportMode SelectedModbusTransportMode =>
+            comboBoxModbusMode.SelectedIndex == 1
+                ? ModbusTransportMode.Tcp
+                : ModbusTransportMode.Rtu;
+
+        private void SaveModbusServerConfiguration(
+            ModbusServerConfiguration configuration)
+        {
+            Properties.Settings.Default.ModbusTransportMode =
+                configuration.TransportMode.ToString();
+
+            ModbusRtuServerConfiguration rtuConfiguration =
+                configuration as ModbusRtuServerConfiguration;
+            if (rtuConfiguration != null)
+            {
+                Properties.Settings.Default.ModbusSerialPort =
+                    rtuConfiguration.PortName;
+            }
+
+            ModbusTcpServerConfiguration tcpConfiguration =
+                configuration as ModbusTcpServerConfiguration;
+            if (tcpConfiguration != null)
+            {
+                Properties.Settings.Default.ModbusTcpListenAddress =
+                    tcpConfiguration.ListenAddress.ToString();
+                Properties.Settings.Default.ModbusTcpPort =
+                    tcpConfiguration.Port;
+            }
+
+            Properties.Settings.Default.Save();
+        }
+
+        private void ApplyModbusConfigurationToControls(
+            ModbusServerConfiguration configuration)
+        {
+            ModbusRtuServerConfiguration rtuConfiguration =
+                configuration as ModbusRtuServerConfiguration;
+            if (rtuConfiguration != null)
+            {
+                comboBoxModbusMode.SelectedIndex = 0;
+                if (!comboBox1.Items.Contains(
+                    rtuConfiguration.PortName))
+                {
+                    comboBox1.Items.Add(
+                        rtuConfiguration.PortName);
+                }
+
+                comboBox1.SelectedItem =
+                    rtuConfiguration.PortName;
+                return;
+            }
+
+            ModbusTcpServerConfiguration tcpConfiguration =
+                configuration as ModbusTcpServerConfiguration;
+            if (tcpConfiguration != null)
+            {
+                comboBoxModbusMode.SelectedIndex = 1;
+                textBoxTcpListenAddress.Text =
+                    tcpConfiguration.ListenAddress.ToString();
+                numericUpDownTcpPort.Value =
+                    tcpConfiguration.Port;
+            }
+        }
+
+        private static bool AreEquivalentModbusConfigurations(
+            ModbusServerConfiguration first,
+            ModbusServerConfiguration second)
+        {
+            if (ReferenceEquals(first, second))
+            {
+                return true;
+            }
+
+            if (first == null ||
+                second == null ||
+                first.TransportMode != second.TransportMode)
+            {
+                return false;
+            }
+
+            ModbusRtuServerConfiguration firstRtu =
+                first as ModbusRtuServerConfiguration;
+            ModbusRtuServerConfiguration secondRtu =
+                second as ModbusRtuServerConfiguration;
+            if (firstRtu != null && secondRtu != null)
+            {
+                return string.Equals(
+                        firstRtu.PortName,
+                        secondRtu.PortName,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    firstRtu.BaudRate == secondRtu.BaudRate &&
+                    firstRtu.Parity == secondRtu.Parity &&
+                    firstRtu.DataBits == secondRtu.DataBits &&
+                    firstRtu.StopBits == secondRtu.StopBits;
+            }
+
+            ModbusTcpServerConfiguration firstTcp =
+                first as ModbusTcpServerConfiguration;
+            ModbusTcpServerConfiguration secondTcp =
+                second as ModbusTcpServerConfiguration;
+            return firstTcp != null &&
+                secondTcp != null &&
+                firstTcp.ListenAddress.Equals(
+                    secondTcp.ListenAddress) &&
+                firstTcp.Port == secondTcp.Port;
+        }
+
+        private void comboBoxModbusMode_SelectedIndexChanged(
+            object sender,
+            EventArgs e)
+        {
+            UpdateModbusConfigurationControls();
+        }
+
+        private void UpdateModbusConfigurationControls()
+        {
+            bool isRtu = SelectedModbusTransportMode ==
+                ModbusTransportMode.Rtu;
+
+            label11.Visible = isRtu;
+            comboBox1.Visible = isRtu;
+            labelTcpListenAddress.Visible = !isRtu;
+            textBoxTcpListenAddress.Visible = !isRtu;
+            labelTcpPort.Visible = !isRtu;
+            numericUpDownTcpPort.Visible = !isRtu;
+        }
+
+        private void SetModbusConfigurationEnabled(bool enabled)
+        {
+            comboBoxModbusMode.Enabled = enabled;
+            comboBox1.Enabled = enabled;
+            textBoxTcpListenAddress.Enabled = enabled;
+            numericUpDownTcpPort.Enabled = enabled;
+        }
+
+        private string GetRunningStatusText(string prefix)
+        {
+            return string.Format(
+                "{0} [{1}]",
+                prefix,
+                _modbusServer.EndpointDescription);
         }
 
         private void DisconnectAllTcpClients()
@@ -527,7 +872,7 @@ namespace VirtualDriverApp
                     checkBox17.Checked)
                 {
                     label10.ForeColor = Color.Green;
-                    label10.Text = "运行中";
+                    label10.Text = GetRunningStatusText("运行中");
                     LogHelper.Logger.Info(
                         "AI01、AI02 动态通信连接成功。");
                 }
@@ -589,7 +934,8 @@ namespace VirtualDriverApp
                 if (!_isShuttingDown)
                 {
                     label10.ForeColor = Color.Green;
-                    label10.Text = "运行中（AI关闭）";
+                    label10.Text = GetRunningStatusText(
+                        "运行中（AI关闭）");
                 }
             }
         }
@@ -652,10 +998,11 @@ namespace VirtualDriverApp
                     : Color.Green;
             label10.Text =
                 isRecovering
-                    ? "通信恢复中..."
+                    ? GetRunningStatusText("通信恢复中...")
                     : aiRequested
-                        ? "运行中"
-                        : "运行中（AI关闭）";
+                        ? GetRunningStatusText("运行中")
+                        : GetRunningStatusText(
+                            "运行中（AI关闭）");
         }
 
         private static void ApplyCurrentFault(
@@ -1207,7 +1554,6 @@ public class ModbusRtuSlave
 
     private static readonly Dictionary<byte, ModbusRtuSlave> slaveInstances =
         new Dictionary<byte, ModbusRtuSlave>();
-    private static readonly ModbusRtuSerialServer serialServer;
     private static readonly object energyHistorySaveLock = new object();
     private static readonly Stopwatch energyHistorySaveClock =
         Stopwatch.StartNew();
@@ -1261,25 +1607,11 @@ public class ModbusRtuSlave
         public double FlowM3PerHour { get; internal set; }
     }
 
-    // 静态构造函数，初始化串口
+    // 静态构造函数只负责与通信传输无关的持久化生命周期。
     static ModbusRtuSlave()
     {
         initialEnergyByAddress = EnergyHistoryStore.Load();
-        serialServer = new ModbusRtuSerialServer(
-            ProcessRequestFrame);
-
         Application.ApplicationExit += OnApplicationExit;
-    }
-
-    // 设置串口参数的接口，外部调用此方法设置串口
-    public static void SetSerialPortSettings(string portName = "COM3", int baudRate = 9600, Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One)
-    {
-        serialServer.ConfigureAndOpen(
-            portName,
-            baudRate,
-            parity,
-            dataBits,
-            stopBits);
     }
 
     // 构造函数，初始化每个从站
@@ -1372,17 +1704,9 @@ public class ModbusRtuSlave
         }
     }
 
-    // 启动 Modbus RTU 从站（只启动一个串口线程）
-    public static void Start()
-    {
-        serialServer.Start();
-        LogHelper.Logger.Info("Modbus RTU 模拟变频器已启动。");
-    }
+    internal byte SlaveAddress => slaveAddress;
 
-    public static void Stop()
-    {
-        serialServer.Stop();
-    }
+    internal int HoldingRegisterCount => holdingRegisters.Length;
 
     public static string HistoryEnergyFilePath =>
         EnergyHistoryStore.FilePath;
@@ -1450,6 +1774,33 @@ public class ModbusRtuSlave
         lock (stateLock)
         {
             return holdingRegisters[address];
+        }
+    }
+
+    internal ushort[] ReadHoldingRegisters(
+        ushort startingAddress,
+        ushort quantity)
+    {
+        int endAddressExclusive = startingAddress + quantity;
+        if (quantity == 0 ||
+            startingAddress >= holdingRegisters.Length ||
+            endAddressExclusive > holdingRegisters.Length)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(startingAddress));
+        }
+
+        UpdateSimulation();
+        lock (stateLock)
+        {
+            ushort[] values = new ushort[quantity];
+            Array.Copy(
+                holdingRegisters,
+                startingAddress,
+                values,
+                0,
+                quantity);
+            return values;
         }
     }
 
@@ -1796,167 +2147,7 @@ public class ModbusRtuSlave
         object sender,
         EventArgs e)
     {
-        try
-        {
-            Stop();
-        }
-        catch (Exception ex)
-        {
-            LogHelper.Logger.Warn(
-                ex,
-                "关闭 Modbus RTU 串口服务时出现异常。");
-        }
-        finally
-        {
-            SaveEnergyHistory();
-        }
-    }
-
-    private static byte[] ProcessRequestFrame(byte[] request)
-    {
-        if (request == null ||
-            request.Length != ModbusRtuProtocol.RequestFrameLength ||
-            !ModbusRtuProtocol.HasValidCrc(request))
-        {
-            return null;
-        }
-
-        byte address = request[0];
-        byte functionCode = request[1];
-
-        ModbusRtuSlave slave;
-        lock (slaveInstances)
-        {
-            slaveInstances.TryGetValue(address, out slave);
-        }
-
-        // Modbus RTU 对未配置的从站地址不应返回任何数据。
-        if (slave == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            if (functionCode == 0x03)
-            {
-                ushort startingAddress = (ushort)(
-                    (request[2] << 8) | request[3]);
-                ushort quantity = (ushort)(
-                    (request[4] << 8) | request[5]);
-                return slave.HandleReadHoldingRegisters(
-                    startingAddress,
-                    quantity);
-            }
-
-            if (functionCode == 0x06)
-            {
-                ushort registerAddress = (ushort)(
-                    (request[2] << 8) | request[3]);
-                ushort registerValue = (ushort)(
-                    (request[4] << 8) | request[5]);
-                return slave.HandleWriteSingleRegister(
-                    registerAddress,
-                    registerValue);
-            }
-
-            return CreateExceptionResponse(
-                address,
-                functionCode,
-                0x01);
-        }
-        catch (Exception ex)
-        {
-            LogHelper.Logger.Error(
-                ex,
-                "处理 Modbus RTU 请求失败，从站：{0}，功能码：0x{1:X2}",
-                address,
-                functionCode);
-            return CreateExceptionResponse(
-                address,
-                functionCode,
-                0x04);
-        }
-    }
-
-    private byte[] HandleReadHoldingRegisters(ushort startingAddress, ushort quantity)
-    {
-        if (quantity == 0 || quantity > 125)
-        {
-            return CreateExceptionResponse(
-                slaveAddress,
-                0x03,
-                0x03);
-        }
-
-        int endAddressExclusive =
-            startingAddress + quantity;
-        if (startingAddress >= holdingRegisters.Length ||
-            endAddressExclusive > holdingRegisters.Length)
-        {
-            return CreateExceptionResponse(
-                slaveAddress,
-                0x03,
-                0x02);
-        }
-
-        UpdateSimulation();
-        lock (stateLock)
-        {
-            byte[] payload =
-                new byte[3 + 2 * quantity];
-            payload[0] = slaveAddress;
-            payload[1] = 0x03;
-            payload[2] = (byte)(2 * quantity);
-
-            for (int i = 0; i < quantity; i++)
-            {
-                ushort registerValue =
-                    holdingRegisters[startingAddress + i];
-                payload[3 + 2 * i] =
-                    (byte)(registerValue >> 8);
-                payload[4 + 2 * i] =
-                    (byte)(registerValue & 0xFF);
-            }
-
-            return ModbusRtuProtocol.AppendCrc(payload);
-        }
-    }
-
-    private byte[] HandleWriteSingleRegister(ushort registerAddress, ushort registerValue)
-    {
-        if (registerAddress >= holdingRegisters.Length)
-        {
-            return CreateExceptionResponse(
-                slaveAddress,
-                0x06,
-                0x02);
-        }
-
-        SetHoldingRegister(registerAddress, registerValue);
-
-        byte[] payload = new byte[6];
-        payload[0] = slaveAddress;
-        payload[1] = 0x06;
-        payload[2] = (byte)(registerAddress >> 8);
-        payload[3] = (byte)(registerAddress & 0xFF);
-        payload[4] = (byte)(registerValue >> 8);
-        payload[5] = (byte)(registerValue & 0xFF);
-        return ModbusRtuProtocol.AppendCrc(payload);
-    }
-
-    private static byte[] CreateExceptionResponse(
-        byte address,
-        byte functionCode,
-        byte exceptionCode)
-    {
-        byte[] payload =
-        {
-            address,
-            (byte)(functionCode | 0x80),
-            exceptionCode
-        };
-        return ModbusRtuProtocol.AppendCrc(payload);
+        SaveEnergyHistory();
     }
 }
 
