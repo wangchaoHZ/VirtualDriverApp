@@ -16,5 +16,14 @@
     <Setting Name="ModbusTcpPort" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">502</Value>
     </Setting>
+    <Setting Name="HydraulicOutputTargetIp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">127.0.0.1</Value>
+    </Setting>
+    <Setting Name="HydraulicOutputPort" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">502</Value>
+    </Setting>
+    <Setting Name="HydraulicOutputUnitId" Type="System.Byte" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -207,11 +207,11 @@ namespace VirtualDriverApp
             timer3.Enabled = false;
             _lifetimeSource.Cancel();
 
-            AiClientSession aiSession =
-                DetachAiClientSession();
-            if (aiSession != null)
+            HydraulicOutputClientSession outputSession =
+                DetachHydraulicOutputSession();
+            if (outputSession != null)
             {
-                aiSession.Dispose();
+                outputSession.Dispose();
             }
 
             _doClient.Dispose();
@@ -235,16 +235,11 @@ namespace VirtualDriverApp
             _responsiveFonts.Clear();
         }
 
-        private const byte AI01_ModbusClient_ID = 5;
-        private const byte AI02_ModbusClient_ID = 6;
         private const byte DO_ModbusClient_ID = 2;
         private const byte DI_ModbusClient_ID = 3;
         private const int DiDataMaximumAgeSeconds = 5;
         private const string ModbusRtuModeDisplayName = "Modbus RTU";
         private const string ModbusTcpModeDisplayName = "Modbus TCP";
-
-        private const string AI01_Endpoint = "192.168.1.133";
-        private const string AI02_Endpoint = "192.168.1.134";
 
         private readonly ResilientModbusTcpClient _doClient =
             new ResilientModbusTcpClient(
@@ -259,33 +254,35 @@ namespace VirtualDriverApp
         private readonly CancellationTokenSource _lifetimeSource =
             new CancellationTokenSource();
         private readonly object _diStateLock = new object();
-        private readonly object _aiSessionLock = new object();
+        private readonly object _hydraulicOutputSessionLock =
+            new object();
 
-        private AiClientSession _aiSession;
+        private HydraulicOutputClientSession
+            _hydraulicOutputSession;
 
-        private sealed class AiClientSession : IDisposable
+        private sealed class HydraulicOutputClientSession : IDisposable
         {
             private int _disposeStarted;
 
-            public AiClientSession(
+            public HydraulicOutputClientSession(
+                HydraulicOutputConfiguration configuration,
                 CancellationToken applicationCancellationToken)
             {
+                Configuration = configuration ??
+                    throw new ArgumentNullException(
+                        nameof(configuration));
                 CancellationSource =
                     CancellationTokenSource.CreateLinkedTokenSource(
                         applicationCancellationToken);
-                AI01 = new ResilientModbusTcpClient(
-                    "AI01",
-                    AI01_Endpoint,
-                    ModbusEndianness.BigEndian);
-                AI02 = new ResilientModbusTcpClient(
-                    "AI02",
-                    AI02_Endpoint,
+                Client = new ResilientModbusTcpClient(
+                    "压力/流量直发",
+                    configuration.Endpoint,
                     ModbusEndianness.BigEndian);
             }
 
-            public ResilientModbusTcpClient AI01 { get; }
+            public HydraulicOutputConfiguration Configuration { get; }
 
-            public ResilientModbusTcpClient AI02 { get; }
+            public ResilientModbusTcpClient Client { get; }
 
             public CancellationTokenSource CancellationSource { get; }
 
@@ -299,8 +296,7 @@ namespace VirtualDriverApp
                 }
 
                 CancellationSource.Cancel();
-                AI01.Dispose();
-                AI02.Dispose();
+                Client.Dispose();
                 CancellationSource.Dispose();
             }
         }
@@ -393,6 +389,27 @@ namespace VirtualDriverApp
                 Math.Min(
                     numericUpDownTcpPort.Maximum,
                     savedTcpPort));
+
+            textBoxHydraulicTargetIp.Text =
+                string.IsNullOrWhiteSpace(
+                    Properties.Settings.Default
+                        .HydraulicOutputTargetIp)
+                    ? IPAddress.Loopback.ToString()
+                    : Properties.Settings.Default
+                        .HydraulicOutputTargetIp;
+            numericUpDownHydraulicPort.Value = Math.Max(
+                numericUpDownHydraulicPort.Minimum,
+                Math.Min(
+                    numericUpDownHydraulicPort.Maximum,
+                    Properties.Settings.Default
+                        .HydraulicOutputPort));
+            numericUpDownHydraulicUnitId.Value = Math.Max(
+                numericUpDownHydraulicUnitId.Minimum,
+                Math.Min(
+                    numericUpDownHydraulicUnitId.Maximum,
+                    Properties.Settings.Default
+                        .HydraulicOutputUnitId));
+            SetHydraulicOutputConfigurationEnabled(true);
             UpdateModbusConfigurationControls();
 
             // 为每个从站设置保持寄存器的初始值
@@ -427,7 +444,7 @@ namespace VirtualDriverApp
                 CancellationToken cancellationToken =
                     _lifetimeSource.Token;
 
-                // DO、DI 是基础设备；AI01、AI02 由 checkBox17 动态启用。
+                // DO、DI 是基础设备；压力/流量 FC16 直发由 checkBox17 动态启用。
                 await Task.WhenAll(
                     _doClient.ConnectAsync(cancellationToken),
                     _diClient.ConnectAsync(cancellationToken));
@@ -466,7 +483,7 @@ namespace VirtualDriverApp
 
                 if (checkBox17.Checked)
                 {
-                    await EnableAiCommunicationAsync();
+                    await EnableHydraulicOutputAsync();
                 }
 
                 button1.ForeColor = Color.Green;
@@ -796,54 +813,106 @@ namespace VirtualDriverApp
 
         private void DisconnectAllTcpClients()
         {
-            AiClientSession aiSession =
-                DetachAiClientSession();
-            if (aiSession != null)
+            HydraulicOutputClientSession outputSession =
+                DetachHydraulicOutputSession();
+            if (outputSession != null)
             {
-                aiSession.Dispose();
+                outputSession.Dispose();
             }
 
             _doClient.Disconnect();
             _diClient.Disconnect();
         }
 
-        private AiClientSession GetAiClientSession()
+        private HydraulicOutputClientSession
+            GetHydraulicOutputSession()
         {
-            lock (_aiSessionLock)
+            lock (_hydraulicOutputSessionLock)
             {
-                return _aiSession;
+                return _hydraulicOutputSession;
             }
         }
 
-        private AiClientSession GetOrCreateAiClientSession()
+        private HydraulicOutputClientSession
+            GetOrCreateHydraulicOutputSession()
         {
-            lock (_aiSessionLock)
+            HydraulicOutputConfiguration configuration =
+                BuildHydraulicOutputConfiguration();
+
+            lock (_hydraulicOutputSessionLock)
             {
-                if (_aiSession == null)
+                if (_hydraulicOutputSession == null)
                 {
-                    _aiSession = new AiClientSession(
-                        _lifetimeSource.Token);
+                    _hydraulicOutputSession =
+                        new HydraulicOutputClientSession(
+                            configuration,
+                            _lifetimeSource.Token);
+                    SaveHydraulicOutputConfiguration(
+                        configuration);
+                    SetHydraulicOutputConfigurationEnabled(false);
                     LogHelper.Logger.Info(
-                        "AI 动态通信已创建：AI01={0}，AI02={1}。",
-                        AI01_Endpoint,
-                        AI02_Endpoint);
+                        "压力/流量 Modbus TCP 主站已创建：{0}，Unit ID={1}。",
+                        configuration.Endpoint,
+                        configuration.UnitIdentifier);
                 }
 
-                return _aiSession;
+                return _hydraulicOutputSession;
             }
         }
 
-        private AiClientSession DetachAiClientSession()
+        private HydraulicOutputClientSession
+            DetachHydraulicOutputSession()
         {
-            lock (_aiSessionLock)
+            lock (_hydraulicOutputSessionLock)
             {
-                AiClientSession aiSession = _aiSession;
-                _aiSession = null;
-                return aiSession;
+                HydraulicOutputClientSession outputSession =
+                    _hydraulicOutputSession;
+                _hydraulicOutputSession = null;
+                return outputSession;
             }
         }
 
-        private async Task EnableAiCommunicationAsync()
+        private HydraulicOutputConfiguration
+            BuildHydraulicOutputConfiguration()
+        {
+            IPAddress targetAddress;
+            if (!IPAddress.TryParse(
+                textBoxHydraulicTargetIp.Text.Trim(),
+                out targetAddress))
+            {
+                throw new ArgumentException(
+                    "压力/流量直发目标 IP 地址格式无效。");
+            }
+
+            return new HydraulicOutputConfiguration(
+                targetAddress,
+                Decimal.ToInt32(
+                    numericUpDownHydraulicPort.Value),
+                Decimal.ToByte(
+                    numericUpDownHydraulicUnitId.Value));
+        }
+
+        private void SaveHydraulicOutputConfiguration(
+            HydraulicOutputConfiguration configuration)
+        {
+            Properties.Settings.Default.HydraulicOutputTargetIp =
+                configuration.TargetAddress.ToString();
+            Properties.Settings.Default.HydraulicOutputPort =
+                configuration.Port;
+            Properties.Settings.Default.HydraulicOutputUnitId =
+                configuration.UnitIdentifier;
+            Properties.Settings.Default.Save();
+        }
+
+        private void SetHydraulicOutputConfigurationEnabled(
+            bool enabled)
+        {
+            textBoxHydraulicTargetIp.Enabled = enabled;
+            numericUpDownHydraulicPort.Enabled = enabled;
+            numericUpDownHydraulicUnitId.Enabled = enabled;
+        }
+
+        private async Task EnableHydraulicOutputAsync()
         {
             if (!_systemStarted ||
                 _isShuttingDown ||
@@ -852,67 +921,79 @@ namespace VirtualDriverApp
                 return;
             }
 
-            AiClientSession aiSession =
-                GetOrCreateAiClientSession();
+            HydraulicOutputClientSession outputSession = null;
 
             try
             {
+                outputSession =
+                    GetOrCreateHydraulicOutputSession();
                 label10.ForeColor = Color.DarkOrange;
-                label10.Text = "AI设备连接中...";
+                label10.Text = "压力/流量目标连接中...";
 
                 CancellationToken cancellationToken =
-                    aiSession.CancellationSource.Token;
-                await Task.WhenAll(
-                    aiSession.AI01.ConnectAsync(cancellationToken),
-                    aiSession.AI02.ConnectAsync(cancellationToken));
+                    outputSession.CancellationSource.Token;
+                await outputSession.Client.ConnectAsync(
+                    cancellationToken);
 
                 if (ReferenceEquals(
-                    GetAiClientSession(),
-                    aiSession) &&
+                    GetHydraulicOutputSession(),
+                    outputSession) &&
                     checkBox17.Checked)
                 {
                     label10.ForeColor = Color.Green;
                     label10.Text = GetRunningStatusText("运行中");
                     LogHelper.Logger.Info(
-                        "AI01、AI02 动态通信连接成功。");
+                        "压力/流量 Modbus TCP 目标连接成功：{0}。",
+                        outputSession.Configuration.Endpoint);
                 }
             }
             catch (OperationCanceledException)
-                when (aiSession.CancellationSource
-                    .IsCancellationRequested)
+                when (outputSession != null &&
+                    outputSession.CancellationSource
+                        .IsCancellationRequested)
             {
-                // 取消勾选或程序退出时的正常结束。
+                // 取消直发或程序退出时的正常结束。
             }
             catch (Exception ex)
             {
                 LogHelper.Logger.Warn(
                     ex,
-                    "AI01、AI02 动态连接失败；保持使能状态并在后续发送时自动重连。");
+                    "压力/流量目标连接失败；后续 FC16 发送时将自动重连。");
 
-                if (ReferenceEquals(
-                    GetAiClientSession(),
-                    aiSession) &&
+                if (outputSession == null)
+                {
+                    checkBox17.Checked = false;
+                    SetHydraulicOutputConfigurationEnabled(true);
+                    MessageBox.Show(
+                        ex.Message,
+                        "压力/流量直发配置无效",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                else if (ReferenceEquals(
+                    GetHydraulicOutputSession(),
+                    outputSession) &&
                     checkBox17.Checked)
                 {
                     label10.ForeColor = Color.DarkOrange;
-                    label10.Text = "AI通信恢复中...";
+                    label10.Text = "压力/流量通信恢复中...";
                 }
             }
         }
 
-        private async Task DisableAiCommunicationAsync()
+        private async Task DisableHydraulicOutputAsync()
         {
-            AiClientSession aiSession =
-                DetachAiClientSession();
-            if (aiSession == null)
+            HydraulicOutputClientSession outputSession =
+                DetachHydraulicOutputSession();
+            if (outputSession != null)
             {
-                return;
+                outputSession.CancellationSource.Cancel();
+                await Task.Run(() => outputSession.Dispose());
+                LogHelper.Logger.Info(
+                    "压力/流量 Modbus TCP 直发已关闭，连接已释放。");
             }
 
-            aiSession.CancellationSource.Cancel();
-            await Task.Run(() => aiSession.Dispose());
-            LogHelper.Logger.Info(
-                "AI 动态通信已关闭，AI01、AI02 连接已释放。");
+            SetHydraulicOutputConfigurationEnabled(true);
         }
 
         private async void checkBox17_CheckedChanged(
@@ -926,16 +1007,16 @@ namespace VirtualDriverApp
 
             if (checkBox17.Checked)
             {
-                await EnableAiCommunicationAsync();
+                await EnableHydraulicOutputAsync();
             }
             else
             {
-                await DisableAiCommunicationAsync();
+                await DisableHydraulicOutputAsync();
                 if (!_isShuttingDown)
                 {
                     label10.ForeColor = Color.Green;
                     label10.Text = GetRunningStatusText(
-                        "运行中（AI关闭）");
+                        "运行中（压力/流量直发关闭）");
                 }
             }
         }
@@ -975,22 +1056,20 @@ namespace VirtualDriverApp
                 _diClient.GetHealthSnapshot()
             };
 
-            bool aiRequested = checkBox17.Checked;
-            AiClientSession aiSession =
-                GetAiClientSession();
-            if (aiRequested && aiSession != null)
+            bool outputRequested = checkBox17.Checked;
+            HydraulicOutputClientSession outputSession =
+                GetHydraulicOutputSession();
+            if (outputRequested && outputSession != null)
             {
                 snapshots.Add(
-                    aiSession.AI01.GetHealthSnapshot());
-                snapshots.Add(
-                    aiSession.AI02.GetHealthSnapshot());
+                    outputSession.Client.GetHealthSnapshot());
             }
 
             bool isRecovering = snapshots.Any(
                 snapshot =>
                     snapshot.State !=
                     ModbusTcpConnectionState.Connected) ||
-                (aiRequested && aiSession == null);
+                (outputRequested && outputSession == null);
 
             label10.ForeColor =
                 isRecovering
@@ -999,10 +1078,10 @@ namespace VirtualDriverApp
             label10.Text =
                 isRecovering
                     ? GetRunningStatusText("通信恢复中...")
-                    : aiRequested
+                    : outputRequested
                         ? GetRunningStatusText("运行中")
                         : GetRunningStatusText(
-                            "运行中（AI关闭）");
+                            "运行中（压力/流量直发关闭）");
         }
 
         private static void ApplyCurrentFault(
@@ -1046,18 +1125,6 @@ namespace VirtualDriverApp
             double maximum)
         {
             return Math.Max(minimum, Math.Min(maximum, value));
-        }
-
-        private static ushort ToAnalogOutputValue(
-            double engineeringValue,
-            double engineeringMaximum)
-        {
-            double normalizedValue = Clamp(
-                engineeringValue / engineeringMaximum,
-                0.0,
-                1.0);
-            return (ushort)Math.Round(
-                4000.0 + normalizedValue * 16000.0);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -1144,40 +1211,6 @@ namespace VirtualDriverApp
                     N2_PV_Show,
                     N2_FV_Show);
 
-                ushort P1_PV_SET = ToAnalogOutputValue(
-                    P1_PV_Show,
-                    pressureSensorMaximum);
-                ushort P2_PV_SET = ToAnalogOutputValue(
-                    P2_PV_Show,
-                    pressureSensorMaximum);
-                ushort N1_PV_SET = ToAnalogOutputValue(
-                    N1_PV_Show,
-                    pressureSensorMaximum);
-                ushort N2_PV_SET = ToAnalogOutputValue(
-                    N2_PV_Show,
-                    pressureSensorMaximum);
-
-                ushort P1_FV_SET = ToAnalogOutputValue(
-                    P1_FV_Show,
-                    flowSensorMaximum);
-                ushort P2_FV_SET = ToAnalogOutputValue(
-                    P2_FV_Show,
-                    flowSensorMaximum);
-                ushort N1_FV_SET = ToAnalogOutputValue(
-                    N1_FV_Show,
-                    flowSensorMaximum);
-                ushort N2_FV_SET = ToAnalogOutputValue(
-                    N2_FV_Show,
-                    flowSensorMaximum);
-
-                ushort S1_CUR_SET = 0;
-                ushort S2_CUR_SET = 0;
-
-
-                const ushort H2_SET = 4120;
-
-                Console.WriteLine("S1 Cur Set:" + S1_CUR_SET.ToString() + "S2 Cur Set:" + S2_CUR_SET);
-
                 byte[] diWordArray = null;
                 try
                 {
@@ -1231,62 +1264,42 @@ namespace VirtualDriverApp
                 }
 
 
-                ushort startAddress = 10;
+                ushort[] hydraulicRegisters =
+                    HydraulicOutputRegisterMap.Encode(
+                        P1_PV_Show,
+                        P1_FV_Show,
+                        N1_PV_Show,
+                        N1_FV_Show,
+                        P2_PV_Show,
+                        P2_FV_Show,
+                        N2_PV_Show,
+                        N2_FV_Show);
 
-                ushort[] values =
-                {
-                    P1_PV_SET,
-                    N1_PV_SET,
-
-                    P1_FV_SET,
-                    N1_FV_SET,
-
-                    P2_PV_SET,
-                    N2_PV_SET,
-
-                    P2_FV_SET,
-                    N2_FV_SET,
-
-                    S1_CUR_SET,
-                    H2_SET,
-                    S2_CUR_SET,
-                    H2_SET,
-                };
-
-                AiClientSession aiSession =
-                    GetAiClientSession();
+                HydraulicOutputClientSession outputSession =
+                    GetHydraulicOutputSession();
                 if (checkBox17.Checked &&
-                    aiSession != null)
+                    outputSession != null)
                 {
                     try
                     {
-                        CancellationToken aiCancellationToken =
-                            aiSession.CancellationSource.Token;
-                        await Task.WhenAll(
-                            aiSession.AI01.ExecuteAsync(
-                                "写入 AI01 模拟量",
-                                activeClient =>
-                                    activeClient
-                                        .WriteMultipleRegisters(
-                                            AI01_ModbusClient_ID,
-                                            startAddress,
-                                            values),
-                                aiCancellationToken),
-                            aiSession.AI02.ExecuteAsync(
-                                "写入 AI02 模拟量",
-                                activeClient =>
-                                    activeClient
-                                        .WriteMultipleRegisters(
-                                            AI02_ModbusClient_ID,
-                                            startAddress,
-                                            values),
-                                aiCancellationToken));
+                        CancellationToken outputCancellationToken =
+                            outputSession.CancellationSource.Token;
+                        await outputSession.Client.ExecuteAsync(
+                            "FC16 写入压力/流量寄存器 0-7",
+                            activeClient =>
+                                activeClient.WriteMultipleRegisters(
+                                    outputSession.Configuration
+                                        .UnitIdentifier,
+                                    HydraulicOutputRegisterMap
+                                        .StartingAddress,
+                                    hydraulicRegisters),
+                            outputCancellationToken);
                     }
                     catch (OperationCanceledException)
-                        when (aiSession.CancellationSource
+                        when (outputSession.CancellationSource
                             .IsCancellationRequested)
                     {
-                        // 动态关闭 AI 或退出程序时的正常取消。
+                        // 动态关闭直发或退出程序时的正常取消。
                     }
                     catch (ModbusTcpCommunicationException)
                     {

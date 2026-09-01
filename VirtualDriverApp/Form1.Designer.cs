@@ -76,6 +76,7 @@
             this.label10 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.groupBoxServerConfig = new System.Windows.Forms.GroupBox();
             this.comboBoxModbusMode = new System.Windows.Forms.ComboBox();
             this.labelModbusMode = new System.Windows.Forms.Label();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
@@ -84,7 +85,18 @@
             this.labelTcpListenAddress = new System.Windows.Forms.Label();
             this.numericUpDownTcpPort = new System.Windows.Forms.NumericUpDown();
             this.labelTcpPort = new System.Windows.Forms.Label();
+            this.label28 = new System.Windows.Forms.Label();
+            this.groupBoxHydraulicOutput = new System.Windows.Forms.GroupBox();
             this.checkBox17 = new System.Windows.Forms.CheckBox();
+            this.textBoxHydraulicTargetIp = new System.Windows.Forms.TextBox();
+            this.labelHydraulicTargetIp = new System.Windows.Forms.Label();
+            this.numericUpDownHydraulicPort = new System.Windows.Forms.NumericUpDown();
+            this.labelHydraulicPort = new System.Windows.Forms.Label();
+            this.numericUpDownHydraulicUnitId = new System.Windows.Forms.NumericUpDown();
+            this.labelHydraulicUnitId = new System.Windows.Forms.Label();
+            this.labelHydraulicRegisterMap = new System.Windows.Forms.Label();
+            this.labelHydraulicScale = new System.Windows.Forms.Label();
+            this.groupBoxRunControl = new System.Windows.Forms.GroupBox();
             this.label12 = new System.Windows.Forms.Label();
             this.textBox10 = new System.Windows.Forms.TextBox();
             this.label13 = new System.Windows.Forms.Label();
@@ -116,13 +128,17 @@
             this.textBox20 = new System.Windows.Forms.TextBox();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.timer3 = new System.Windows.Forms.Timer(this.components);
-            this.label28 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.groupBoxServerConfig.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTcpPort)).BeginInit();
+            this.groupBoxHydraulicOutput.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownHydraulicPort)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownHydraulicUnitId)).BeginInit();
+            this.groupBoxRunControl.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -144,10 +160,10 @@
             // 
             this.button1.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button1.ForeColor = System.Drawing.Color.Black;
-            this.button1.Location = new System.Drawing.Point(2008, 285);
+            this.button1.Location = new System.Drawing.Point(20, 45);
             this.button1.Margin = new System.Windows.Forms.Padding(5);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(445, 86);
+            this.button1.Size = new System.Drawing.Size(420, 65);
             this.button1.TabIndex = 5;
             this.button1.Text = "启动模拟器";
             this.button1.UseVisualStyleBackColor = true;
@@ -678,24 +694,24 @@
             // 
             // label10
             // 
-            this.label10.AutoSize = true;
-            this.label10.Font = new System.Drawing.Font("宋体", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label10.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
-            this.label10.Location = new System.Drawing.Point(1803, 73);
+            this.label10.Location = new System.Drawing.Point(20, 205);
             this.label10.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(117, 28);
+            this.label10.Size = new System.Drawing.Size(420, 60);
             this.label10.TabIndex = 11;
             this.label10.Text = "label10";
+            this.label10.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // button2
             // 
             this.button2.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.button2.ForeColor = System.Drawing.Color.Black;
-            this.button2.Location = new System.Drawing.Point(2008, 381);
+            this.button2.Location = new System.Drawing.Point(20, 125);
             this.button2.Margin = new System.Windows.Forms.Padding(5);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(445, 86);
+            this.button2.Size = new System.Drawing.Size(420, 65);
             this.button2.TabIndex = 12;
             this.button2.Text = "关闭模拟器";
             this.button2.UseVisualStyleBackColor = true;
@@ -712,6 +728,28 @@
             this.pictureBox1.TabIndex = 14;
             this.pictureBox1.TabStop = false;
             // 
+            // groupBoxServerConfig
+            //
+            this.groupBoxServerConfig.Controls.Add(this.label28);
+            this.groupBoxServerConfig.Controls.Add(this.labelTcpPort);
+            this.groupBoxServerConfig.Controls.Add(this.numericUpDownTcpPort);
+            this.groupBoxServerConfig.Controls.Add(this.labelTcpListenAddress);
+            this.groupBoxServerConfig.Controls.Add(this.textBoxTcpListenAddress);
+            this.groupBoxServerConfig.Controls.Add(this.label11);
+            this.groupBoxServerConfig.Controls.Add(this.comboBox1);
+            this.groupBoxServerConfig.Controls.Add(this.labelModbusMode);
+            this.groupBoxServerConfig.Controls.Add(this.comboBoxModbusMode);
+            this.groupBoxServerConfig.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.groupBoxServerConfig.ForeColor = System.Drawing.Color.Black;
+            this.groupBoxServerConfig.Location = new System.Drawing.Point(1996, 155);
+            this.groupBoxServerConfig.Margin = new System.Windows.Forms.Padding(5);
+            this.groupBoxServerConfig.Name = "groupBoxServerConfig";
+            this.groupBoxServerConfig.Padding = new System.Windows.Forms.Padding(5);
+            this.groupBoxServerConfig.Size = new System.Drawing.Size(460, 210);
+            this.groupBoxServerConfig.TabIndex = 84;
+            this.groupBoxServerConfig.TabStop = false;
+            this.groupBoxServerConfig.Text = "模拟变频器服务端";
+            //
             // comboBoxModbusMode
             // 
             this.comboBoxModbusMode.BackColor = System.Drawing.Color.White;
@@ -719,10 +757,10 @@
             this.comboBoxModbusMode.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.comboBoxModbusMode.ForeColor = System.Drawing.Color.Black;
             this.comboBoxModbusMode.FormattingEnabled = true;
-            this.comboBoxModbusMode.Location = new System.Drawing.Point(2214, 160);
+            this.comboBoxModbusMode.Location = new System.Drawing.Point(175, 43);
             this.comboBoxModbusMode.Margin = new System.Windows.Forms.Padding(5);
             this.comboBoxModbusMode.Name = "comboBoxModbusMode";
-            this.comboBoxModbusMode.Size = new System.Drawing.Size(229, 32);
+            this.comboBoxModbusMode.Size = new System.Drawing.Size(260, 32);
             this.comboBoxModbusMode.TabIndex = 77;
             this.comboBoxModbusMode.SelectedIndexChanged += new System.EventHandler(this.comboBoxModbusMode_SelectedIndexChanged);
             // 
@@ -731,7 +769,7 @@
             this.labelModbusMode.AutoSize = true;
             this.labelModbusMode.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.labelModbusMode.ForeColor = System.Drawing.Color.Black;
-            this.labelModbusMode.Location = new System.Drawing.Point(2014, 160);
+            this.labelModbusMode.Location = new System.Drawing.Point(20, 45);
             this.labelModbusMode.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.labelModbusMode.Name = "labelModbusMode";
             this.labelModbusMode.Size = new System.Drawing.Size(110, 31);
@@ -744,10 +782,10 @@
             this.comboBox1.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.comboBox1.ForeColor = System.Drawing.Color.Black;
             this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(2214, 220);
+            this.comboBox1.Location = new System.Drawing.Point(175, 98);
             this.comboBox1.Margin = new System.Windows.Forms.Padding(5);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(229, 32);
+            this.comboBox1.Size = new System.Drawing.Size(260, 32);
             this.comboBox1.TabIndex = 15;
             // 
             // label11
@@ -755,7 +793,7 @@
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.label11.ForeColor = System.Drawing.Color.Black;
-            this.label11.Location = new System.Drawing.Point(2014, 220);
+            this.label11.Location = new System.Drawing.Point(20, 100);
             this.label11.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(134, 31);
@@ -765,10 +803,10 @@
             // textBoxTcpListenAddress
             // 
             this.textBoxTcpListenAddress.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.textBoxTcpListenAddress.Location = new System.Drawing.Point(2117, 220);
+            this.textBoxTcpListenAddress.Location = new System.Drawing.Point(115, 99);
             this.textBoxTcpListenAddress.Margin = new System.Windows.Forms.Padding(5);
             this.textBoxTcpListenAddress.Name = "textBoxTcpListenAddress";
-            this.textBoxTcpListenAddress.Size = new System.Drawing.Size(174, 31);
+            this.textBoxTcpListenAddress.Size = new System.Drawing.Size(170, 31);
             this.textBoxTcpListenAddress.TabIndex = 79;
             this.textBoxTcpListenAddress.Text = "0.0.0.0";
             // 
@@ -777,7 +815,7 @@
             this.labelTcpListenAddress.AutoSize = true;
             this.labelTcpListenAddress.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.labelTcpListenAddress.ForeColor = System.Drawing.Color.Black;
-            this.labelTcpListenAddress.Location = new System.Drawing.Point(2014, 221);
+            this.labelTcpListenAddress.Location = new System.Drawing.Point(20, 101);
             this.labelTcpListenAddress.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.labelTcpListenAddress.Name = "labelTcpListenAddress";
             this.labelTcpListenAddress.Size = new System.Drawing.Size(78, 27);
@@ -787,7 +825,7 @@
             // numericUpDownTcpPort
             // 
             this.numericUpDownTcpPort.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.numericUpDownTcpPort.Location = new System.Drawing.Point(2371, 220);
+            this.numericUpDownTcpPort.Location = new System.Drawing.Point(350, 99);
             this.numericUpDownTcpPort.Margin = new System.Windows.Forms.Padding(5);
             this.numericUpDownTcpPort.Maximum = new decimal(new int[] {
             65535,
@@ -800,7 +838,7 @@
             0,
             0});
             this.numericUpDownTcpPort.Name = "numericUpDownTcpPort";
-            this.numericUpDownTcpPort.Size = new System.Drawing.Size(82, 31);
+            this.numericUpDownTcpPort.Size = new System.Drawing.Size(85, 31);
             this.numericUpDownTcpPort.TabIndex = 81;
             this.numericUpDownTcpPort.Value = new decimal(new int[] {
             502,
@@ -813,27 +851,153 @@
             this.labelTcpPort.AutoSize = true;
             this.labelTcpPort.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.labelTcpPort.ForeColor = System.Drawing.Color.Black;
-            this.labelTcpPort.Location = new System.Drawing.Point(2300, 221);
+            this.labelTcpPort.Location = new System.Drawing.Point(295, 101);
             this.labelTcpPort.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.labelTcpPort.Name = "labelTcpPort";
             this.labelTcpPort.Size = new System.Drawing.Size(52, 27);
             this.labelTcpPort.TabIndex = 82;
             this.labelTcpPort.Text = "端口";
             // 
+            // groupBoxHydraulicOutput
+            //
+            this.groupBoxHydraulicOutput.Controls.Add(this.labelHydraulicScale);
+            this.groupBoxHydraulicOutput.Controls.Add(this.labelHydraulicRegisterMap);
+            this.groupBoxHydraulicOutput.Controls.Add(this.labelHydraulicUnitId);
+            this.groupBoxHydraulicOutput.Controls.Add(this.numericUpDownHydraulicUnitId);
+            this.groupBoxHydraulicOutput.Controls.Add(this.labelHydraulicPort);
+            this.groupBoxHydraulicOutput.Controls.Add(this.numericUpDownHydraulicPort);
+            this.groupBoxHydraulicOutput.Controls.Add(this.labelHydraulicTargetIp);
+            this.groupBoxHydraulicOutput.Controls.Add(this.textBoxHydraulicTargetIp);
+            this.groupBoxHydraulicOutput.Controls.Add(this.checkBox17);
+            this.groupBoxHydraulicOutput.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.groupBoxHydraulicOutput.ForeColor = System.Drawing.Color.Black;
+            this.groupBoxHydraulicOutput.Location = new System.Drawing.Point(1996, 380);
+            this.groupBoxHydraulicOutput.Margin = new System.Windows.Forms.Padding(5);
+            this.groupBoxHydraulicOutput.Name = "groupBoxHydraulicOutput";
+            this.groupBoxHydraulicOutput.Padding = new System.Windows.Forms.Padding(5);
+            this.groupBoxHydraulicOutput.Size = new System.Drawing.Size(460, 350);
+            this.groupBoxHydraulicOutput.TabIndex = 85;
+            this.groupBoxHydraulicOutput.TabStop = false;
+            this.groupBoxHydraulicOutput.Text = "压力/流量 Modbus TCP 主站";
+            //
             // checkBox17
             // 
             this.checkBox17.AutoSize = true;
             this.checkBox17.Font = new System.Drawing.Font("微软雅黑", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.checkBox17.ForeColor = System.Drawing.Color.Black;
-            this.checkBox17.Location = new System.Drawing.Point(2014, 500);
+            this.checkBox17.Location = new System.Drawing.Point(20, 40);
             this.checkBox17.Margin = new System.Windows.Forms.Padding(5);
             this.checkBox17.Name = "checkBox17";
-            this.checkBox17.Size = new System.Drawing.Size(228, 35);
+            this.checkBox17.Size = new System.Drawing.Size(313, 35);
             this.checkBox17.TabIndex = 76;
-            this.checkBox17.Text = "启用 AI01 / AI02";
+            this.checkBox17.Text = "启用 FC16 压力/流量直发";
             this.checkBox17.UseVisualStyleBackColor = true;
             this.checkBox17.CheckedChanged += new System.EventHandler(this.checkBox17_CheckedChanged);
             // 
+            // textBoxHydraulicTargetIp
+            //
+            this.textBoxHydraulicTargetIp.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBoxHydraulicTargetIp.Location = new System.Drawing.Point(140, 86);
+            this.textBoxHydraulicTargetIp.Margin = new System.Windows.Forms.Padding(5);
+            this.textBoxHydraulicTargetIp.Name = "textBoxHydraulicTargetIp";
+            this.textBoxHydraulicTargetIp.Size = new System.Drawing.Size(295, 31);
+            this.textBoxHydraulicTargetIp.TabIndex = 86;
+            this.textBoxHydraulicTargetIp.Text = "127.0.0.1";
+            //
+            // labelHydraulicTargetIp
+            //
+            this.labelHydraulicTargetIp.AutoSize = true;
+            this.labelHydraulicTargetIp.Font = new System.Drawing.Font("微软雅黑", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelHydraulicTargetIp.Location = new System.Drawing.Point(20, 89);
+            this.labelHydraulicTargetIp.Name = "labelHydraulicTargetIp";
+            this.labelHydraulicTargetIp.Size = new System.Drawing.Size(103, 26);
+            this.labelHydraulicTargetIp.TabIndex = 87;
+            this.labelHydraulicTargetIp.Text = "目标 IP";
+            //
+            // numericUpDownHydraulicPort
+            //
+            this.numericUpDownHydraulicPort.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.numericUpDownHydraulicPort.Location = new System.Drawing.Point(140, 136);
+            this.numericUpDownHydraulicPort.Maximum = new decimal(new int[] {
+            65535,
+            0,
+            0,
+            0});
+            this.numericUpDownHydraulicPort.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownHydraulicPort.Name = "numericUpDownHydraulicPort";
+            this.numericUpDownHydraulicPort.Size = new System.Drawing.Size(120, 31);
+            this.numericUpDownHydraulicPort.TabIndex = 88;
+            this.numericUpDownHydraulicPort.Value = new decimal(new int[] {
+            502,
+            0,
+            0,
+            0});
+            //
+            // labelHydraulicPort
+            //
+            this.labelHydraulicPort.AutoSize = true;
+            this.labelHydraulicPort.Font = new System.Drawing.Font("微软雅黑", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelHydraulicPort.Location = new System.Drawing.Point(20, 139);
+            this.labelHydraulicPort.Name = "labelHydraulicPort";
+            this.labelHydraulicPort.Size = new System.Drawing.Size(50, 26);
+            this.labelHydraulicPort.TabIndex = 89;
+            this.labelHydraulicPort.Text = "端口";
+            //
+            // numericUpDownHydraulicUnitId
+            //
+            this.numericUpDownHydraulicUnitId.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.numericUpDownHydraulicUnitId.Location = new System.Drawing.Point(360, 136);
+            this.numericUpDownHydraulicUnitId.Maximum = new decimal(new int[] {
+            247,
+            0,
+            0,
+            0});
+            this.numericUpDownHydraulicUnitId.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownHydraulicUnitId.Name = "numericUpDownHydraulicUnitId";
+            this.numericUpDownHydraulicUnitId.Size = new System.Drawing.Size(75, 31);
+            this.numericUpDownHydraulicUnitId.TabIndex = 90;
+            this.numericUpDownHydraulicUnitId.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            //
+            // labelHydraulicUnitId
+            //
+            this.labelHydraulicUnitId.AutoSize = true;
+            this.labelHydraulicUnitId.Font = new System.Drawing.Font("微软雅黑", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelHydraulicUnitId.Location = new System.Drawing.Point(275, 139);
+            this.labelHydraulicUnitId.Name = "labelHydraulicUnitId";
+            this.labelHydraulicUnitId.Size = new System.Drawing.Size(77, 26);
+            this.labelHydraulicUnitId.TabIndex = 91;
+            this.labelHydraulicUnitId.Text = "Unit ID";
+            //
+            // labelHydraulicRegisterMap
+            //
+            this.labelHydraulicRegisterMap.Font = new System.Drawing.Font("微软雅黑", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelHydraulicRegisterMap.Location = new System.Drawing.Point(20, 190);
+            this.labelHydraulicRegisterMap.Name = "labelHydraulicRegisterMap";
+            this.labelHydraulicRegisterMap.Size = new System.Drawing.Size(415, 75);
+            this.labelHydraulicRegisterMap.TabIndex = 92;
+            this.labelHydraulicRegisterMap.Text = "FC16 保持寄存器 0-7\r\n0/1=P1压力/流量；2/3=N1压力/流量\r\n4/5=P2压力/流量；6/7=N2压力/流量";
+            //
+            // labelHydraulicScale
+            //
+            this.labelHydraulicScale.Font = new System.Drawing.Font("微软雅黑", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.labelHydraulicScale.Location = new System.Drawing.Point(20, 275);
+            this.labelHydraulicScale.Name = "labelHydraulicScale";
+            this.labelHydraulicScale.Size = new System.Drawing.Size(415, 50);
+            this.labelHydraulicScale.TabIndex = 93;
+            this.labelHydraulicScale.Text = "编码：压力 × 10000（0.0001 MPa）\r\n　　　流量 × 100（0.01 m³/h）";
+            //
             // label12
             // 
             this.label12.AutoSize = true;
@@ -1239,15 +1403,31 @@
             this.timer3.Interval = 10000;
             this.timer3.Tick += new System.EventHandler(this.timer3_Tick);
             // 
+            // groupBoxRunControl
+            //
+            this.groupBoxRunControl.Controls.Add(this.label10);
+            this.groupBoxRunControl.Controls.Add(this.button2);
+            this.groupBoxRunControl.Controls.Add(this.button1);
+            this.groupBoxRunControl.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.groupBoxRunControl.ForeColor = System.Drawing.Color.Black;
+            this.groupBoxRunControl.Location = new System.Drawing.Point(1996, 745);
+            this.groupBoxRunControl.Margin = new System.Windows.Forms.Padding(5);
+            this.groupBoxRunControl.Name = "groupBoxRunControl";
+            this.groupBoxRunControl.Padding = new System.Windows.Forms.Padding(5);
+            this.groupBoxRunControl.Size = new System.Drawing.Size(460, 285);
+            this.groupBoxRunControl.TabIndex = 94;
+            this.groupBoxRunControl.TabStop = false;
+            this.groupBoxRunControl.Text = "运行控制";
+            //
             // label28
             // 
             this.label28.AutoSize = true;
-            this.label28.Font = new System.Drawing.Font("宋体", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label28.Location = new System.Drawing.Point(2015, 553);
+            this.label28.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label28.Location = new System.Drawing.Point(20, 155);
             this.label28.Name = "label28";
-            this.label28.Size = new System.Drawing.Size(305, 28);
+            this.label28.Size = new System.Drawing.Size(300, 24);
             this.label28.TabIndex = 83;
-            this.label28.Text = "频率地给定址：0x2001";
+            this.label28.Text = "频率给定地址：0x2001";
             // 
             // Form1
             // 
@@ -1255,24 +1435,14 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(2476, 1348);
-            this.Controls.Add(this.label28);
-            this.Controls.Add(this.checkBox17);
-            this.Controls.Add(this.label10);
-            this.Controls.Add(this.labelTcpPort);
-            this.Controls.Add(this.numericUpDownTcpPort);
-            this.Controls.Add(this.labelTcpListenAddress);
-            this.Controls.Add(this.textBoxTcpListenAddress);
-            this.Controls.Add(this.label11);
-            this.Controls.Add(this.comboBox1);
-            this.Controls.Add(this.labelModbusMode);
-            this.Controls.Add(this.comboBoxModbusMode);
+            this.Controls.Add(this.groupBoxRunControl);
+            this.Controls.Add(this.groupBoxHydraulicOutput);
+            this.Controls.Add(this.groupBoxServerConfig);
             this.Controls.Add(this.pictureBox1);
-            this.Controls.Add(this.button2);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.button1);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBox5);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -1290,6 +1460,13 @@
             this.groupBox4.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTcpPort)).EndInit();
+            this.groupBoxServerConfig.ResumeLayout(false);
+            this.groupBoxServerConfig.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownHydraulicPort)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownHydraulicUnitId)).EndInit();
+            this.groupBoxHydraulicOutput.ResumeLayout(false);
+            this.groupBoxHydraulicOutput.PerformLayout();
+            this.groupBoxRunControl.ResumeLayout(false);
             this.groupBox5.ResumeLayout(false);
             this.groupBox5.PerformLayout();
             this.ResumeLayout(false);
@@ -1333,6 +1510,7 @@
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.GroupBox groupBoxServerConfig;
         private System.Windows.Forms.ComboBox comboBoxModbusMode;
         private System.Windows.Forms.Label labelModbusMode;
         private System.Windows.Forms.ComboBox comboBox1;
@@ -1341,6 +1519,16 @@
         private System.Windows.Forms.Label labelTcpListenAddress;
         private System.Windows.Forms.NumericUpDown numericUpDownTcpPort;
         private System.Windows.Forms.Label labelTcpPort;
+        private System.Windows.Forms.GroupBox groupBoxHydraulicOutput;
+        private System.Windows.Forms.TextBox textBoxHydraulicTargetIp;
+        private System.Windows.Forms.Label labelHydraulicTargetIp;
+        private System.Windows.Forms.NumericUpDown numericUpDownHydraulicPort;
+        private System.Windows.Forms.Label labelHydraulicPort;
+        private System.Windows.Forms.NumericUpDown numericUpDownHydraulicUnitId;
+        private System.Windows.Forms.Label labelHydraulicUnitId;
+        private System.Windows.Forms.Label labelHydraulicRegisterMap;
+        private System.Windows.Forms.Label labelHydraulicScale;
+        private System.Windows.Forms.GroupBox groupBoxRunControl;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.TextBox textBox10;
         private System.Windows.Forms.Label label13;

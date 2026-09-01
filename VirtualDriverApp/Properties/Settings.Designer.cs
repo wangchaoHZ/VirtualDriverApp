@@ -86,5 +86,50 @@ namespace VirtualDriverApp.Properties
                 this["ModbusTcpPort"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1")]
+        public string HydraulicOutputTargetIp
+        {
+            get
+            {
+                return ((string)(this["HydraulicOutputTargetIp"]));
+            }
+            set
+            {
+                this["HydraulicOutputTargetIp"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("502")]
+        public int HydraulicOutputPort
+        {
+            get
+            {
+                return ((int)(this["HydraulicOutputPort"]));
+            }
+            set
+            {
+                this["HydraulicOutputPort"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public byte HydraulicOutputUnitId
+        {
+            get
+            {
+                return ((byte)(this["HydraulicOutputUnitId"]));
+            }
+            set
+            {
+                this["HydraulicOutputUnitId"] = value;
+            }
+        }
     }
 }

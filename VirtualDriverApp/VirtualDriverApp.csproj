@@ -75,6 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EnergyHistoryStore.cs" />
+    <Compile Include="HydraulicOutputRegisterMap.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
