@@ -784,15 +784,15 @@ namespace VirtualDriverApp
 
         private void UpdateModbusConfigurationControls()
         {
-            bool isRtu = SelectedModbusTransportMode ==
-                ModbusTransportMode.Rtu;
+            //bool isRtu = SelectedModbusTransportMode ==
+            //    ModbusTransportMode.Rtu;
 
-            label11.Visible = isRtu;
-            comboBox1.Visible = isRtu;
-            labelTcpListenAddress.Visible = !isRtu;
-            textBoxTcpListenAddress.Visible = !isRtu;
-            labelTcpPort.Visible = !isRtu;
-            numericUpDownTcpPort.Visible = !isRtu;
+            ////label11.Visible = isRtu;
+            ////comboBox1.Visible = isRtu;
+            ////labelTcpListenAddress.Visible = !isRtu;
+            ////textBoxTcpListenAddress.Visible = !isRtu;
+            //////labelTcpPort.Visible = !isRtu;
+            ////numericUpDownTcpPort.Visible = !isRtu;
         }
 
         private void SetModbusConfigurationEnabled(bool enabled)
@@ -1321,16 +1321,16 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox9.Checked)
-                {
-                    PN1_PRESS_DIFF = -Convert.ToDouble(textBox11.Text);
-                }
-                else
-                {
-                    PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
-                }
+                //if (checkBox9.Checked)
+                //{
+                //    PN1_PRESS_DIFF = -Convert.ToDouble(textBox11.Text);
+                //}
+                //else
+                //{
+                //    PN1_PRESS_DIFF = Convert.ToDouble(textBox11.Text);
+                //}
 
-                Console.WriteLine("转换成功: " + PN1_PRESS_DIFF);
+                //Console.WriteLine("转换成功: " + PN1_PRESS_DIFF);
             }
             catch (FormatException)
             {
@@ -1348,15 +1348,15 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox10.Checked)
-                {
-                    PN1_FLOW_DIFF = -Convert.ToDouble(textBox12.Text);
-                }
-                else
-                {
-                    PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
-                }
-                Console.WriteLine("转换成功: " + PN1_FLOW_DIFF);
+                //if (checkBox10.Checked)
+                //{
+                //    PN1_FLOW_DIFF = -Convert.ToDouble(textBox12.Text);
+                //}
+                //else
+                //{
+                //    PN1_FLOW_DIFF = Convert.ToDouble(textBox12.Text);
+                //}
+                //Console.WriteLine("转换成功: " + PN1_FLOW_DIFF);
             }
             catch (FormatException)
             {
@@ -1374,15 +1374,15 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox11.Checked)
-                {
-                    PN2_PRESS_DIFF = -Convert.ToDouble(textBox17.Text);
-                }
-                else
-                {
-                    PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
-                }
-                Console.WriteLine("转换成功: " + PN2_PRESS_DIFF);
+                //if (checkBox11.Checked)
+                //{
+                //    PN2_PRESS_DIFF = -Convert.ToDouble(textBox17.Text);
+                //}
+                //else
+                //{
+                //    PN2_PRESS_DIFF = Convert.ToDouble(textBox17.Text);
+                //}
+                //Console.WriteLine("转换成功: " + PN2_PRESS_DIFF);
             }
             catch (FormatException)
             {
@@ -1400,15 +1400,15 @@ namespace VirtualDriverApp
         {
             try
             {
-                if (checkBox12.Checked)
-                {
-                    PN2_FLOW_DIFF = -Convert.ToDouble(textBox20.Text);
-                }
-                else
-                {
-                    PN2_FLOW_DIFF = Convert.ToDouble(textBox20.Text);
-                }
-                Console.WriteLine("转换成功: " + PN2_FLOW_DIFF);
+                //if (checkBox12.Checked)
+                //{
+                //    PN2_FLOW_DIFF = -Convert.ToDouble(textBox20.Text);
+                //}
+                //else
+                //{
+                //    PN2_FLOW_DIFF = Convert.ToDouble(textBox20.Text);
+                //}
+                //Console.WriteLine("转换成功: " + PN2_FLOW_DIFF);
             }
             catch (FormatException)
             {
@@ -1545,6 +1545,16 @@ namespace VirtualDriverApp
             {
                 _timer3Busy = false;
             }
+        }
+
+        private void labelHydraulicScale_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void labelHydraulicRegisterMap_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
