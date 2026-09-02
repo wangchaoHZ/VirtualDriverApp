@@ -116,6 +116,16 @@ internal interface IModbusDataStore
 
     bool ContainsUnit(byte unitIdentifier);
 
+    bool IsValidInputRegisterRange(
+        byte unitIdentifier,
+        ushort startingAddress,
+        ushort quantity);
+
+    ushort[] ReadInputRegisters(
+        byte unitIdentifier,
+        ushort startingAddress,
+        ushort quantity);
+
     bool IsValidHoldingRegisterRange(
         byte unitIdentifier,
         ushort startingAddress,
@@ -136,6 +146,7 @@ internal sealed class VirtualModbusDataStore : IModbusDataStore
 {
     private readonly Dictionary<byte, ModbusRtuSlave> units;
     private readonly byte[] unitIdentifiers;
+    private readonly ModbusRtuSlave[] energyUnits;
 
     public VirtualModbusDataStore(
         IEnumerable<ModbusRtuSlave> modbusUnits)
@@ -145,7 +156,8 @@ internal sealed class VirtualModbusDataStore : IModbusDataStore
             throw new ArgumentNullException(nameof(modbusUnits));
         }
 
-        units = modbusUnits.ToDictionary(
+        ModbusRtuSlave[] configuredUnits = modbusUnits.ToArray();
+        units = configuredUnits.ToDictionary(
             unit => unit.SlaveAddress,
             unit => unit);
 
@@ -159,6 +171,12 @@ internal sealed class VirtualModbusDataStore : IModbusDataStore
         unitIdentifiers = units.Keys
             .OrderBy(unitIdentifier => unitIdentifier)
             .ToArray();
+
+        // Form1 passes the pumps in the fixed P1, N1, P2, N2 order.
+        // Preserve that order for the aggregate FC04 input-register map.
+        energyUnits = configuredUnits
+            .Take(PumpEnergyInputRegisterMap.PumpCount)
+            .ToArray();
     }
 
     public IReadOnlyList<byte> UnitIdentifiers => unitIdentifiers;
@@ -166,6 +184,52 @@ internal sealed class VirtualModbusDataStore : IModbusDataStore
     public bool ContainsUnit(byte unitIdentifier)
     {
         return units.ContainsKey(unitIdentifier);
+    }
+
+    public bool IsValidInputRegisterRange(
+        byte unitIdentifier,
+        ushort startingAddress,
+        ushort quantity)
+    {
+        if (quantity == 0 || !ContainsUnit(unitIdentifier))
+        {
+            return false;
+        }
+
+        int endAddressExclusive = startingAddress + quantity;
+        return startingAddress <
+                PumpEnergyInputRegisterMap.RegisterCount &&
+            endAddressExclusive <=
+                PumpEnergyInputRegisterMap.RegisterCount;
+    }
+
+    public ushort[] ReadInputRegisters(
+        byte unitIdentifier,
+        ushort startingAddress,
+        ushort quantity)
+    {
+        if (!IsValidInputRegisterRange(
+            unitIdentifier,
+            startingAddress,
+            quantity))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(startingAddress));
+        }
+
+        ushort[] allRegisters = PumpEnergyInputRegisterMap.Encode(
+            GetEnergyKwh(0),
+            GetEnergyKwh(1),
+            GetEnergyKwh(2),
+            GetEnergyKwh(3));
+        ushort[] values = new ushort[quantity];
+        Array.Copy(
+            allRegisters,
+            startingAddress,
+            values,
+            0,
+            quantity);
+        return values;
     }
 
     public bool IsValidHoldingRegisterRange(
@@ -218,6 +282,13 @@ internal sealed class VirtualModbusDataStore : IModbusDataStore
         }
 
         return unit;
+    }
+
+    private double GetEnergyKwh(int pumpIndex)
+    {
+        return pumpIndex < energyUnits.Length
+            ? energyUnits[pumpIndex].GetAccumulatedEnergyKwh()
+            : 0.0;
     }
 }
 

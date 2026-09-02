@@ -98,6 +98,7 @@ internal sealed class ModbusRtuServerAdapter : IModbusServer
 internal sealed class FluentModbusTcpServerAdapter : IModbusServer
 {
     private const ushort MaximumReadHoldingRegisterQuantity = 125;
+    private const ushort MaximumReadInputRegisterQuantity = 125;
 
     private readonly object lifecycleLock = new object();
     private readonly ModbusTcpServerConfiguration configuration;
@@ -251,6 +252,31 @@ internal sealed class FluentModbusTcpServerAdapter : IModbusServer
         }
 
         if (functionCode ==
+            ModbusFunctionCode.ReadInputRegisters)
+        {
+            if (quantityOfRegisters == 0 ||
+                quantityOfRegisters >
+                    MaximumReadInputRegisterQuantity)
+            {
+                return ModbusExceptionCode.IllegalDataValue;
+            }
+
+            if (!dataStore.IsValidInputRegisterRange(
+                unitIdentifier,
+                address,
+                quantityOfRegisters))
+            {
+                return ModbusExceptionCode.IllegalDataAddress;
+            }
+
+            SynchronizeInputDataStoreToServer(
+                unitIdentifier,
+                address,
+                quantityOfRegisters);
+            return ModbusExceptionCode.OK;
+        }
+
+        if (functionCode ==
             ModbusFunctionCode.WriteSingleRegister)
         {
             return dataStore.IsValidHoldingRegisterRange(
@@ -261,7 +287,7 @@ internal sealed class FluentModbusTcpServerAdapter : IModbusServer
                     : ModbusExceptionCode.IllegalDataAddress;
         }
 
-        // 与原 RTU 模拟器保持一致：仅开放 FC03 和 FC06。
+        // TCP additionally exposes the read-only pump energy map through FC04.
         return ModbusExceptionCode.IllegalFunction;
     }
 
@@ -357,6 +383,37 @@ internal sealed class FluentModbusTcpServerAdapter : IModbusServer
             registerBuffer[byteOffset] = (byte)(value >> 8);
             registerBuffer[byteOffset + 1] =
                 (byte)(value & 0xFF);
+        }
+    }
+
+    private void SynchronizeInputDataStoreToServer(
+        byte unitIdentifier,
+        ushort startingAddress,
+        ushort quantity)
+    {
+        ModbusTcpServer activeServer = server;
+        if (activeServer == null)
+        {
+            return;
+        }
+
+        lock (activeServer.Lock)
+        {
+            ushort[] values = dataStore.ReadInputRegisters(
+                unitIdentifier,
+                startingAddress,
+                quantity);
+            Span<byte> registerBuffer =
+                activeServer.GetInputRegisterBuffer(unitIdentifier);
+
+            for (int index = 0; index < values.Length; index++)
+            {
+                int byteOffset = (startingAddress + index) * 2;
+                ushort value = values[index];
+                registerBuffer[byteOffset] = (byte)(value >> 8);
+                registerBuffer[byteOffset + 1] =
+                    (byte)(value & 0xFF);
+            }
         }
     }
 
