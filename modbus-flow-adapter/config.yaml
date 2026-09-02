@@ -1,0 +1,57 @@
+# 泵模拟器 -> 接口设备 Modbus TCP 流量适配器
+app:
+  log_level: info
+  log_each_update: true
+  # 默认只缓存最新一帧，防止输出端短暂阻塞时积压旧流量。
+  queue_capacity: 1
+
+# 输入侧：本程序作为 Modbus TCP 从站，泵模拟器作为主站向这里写入。
+input:
+  listen: "0.0.0.0:1502"
+  unit_id: 1
+  idle_timeout: 60s
+  max_clients: 8
+  holding_register_count: 8
+
+  # VirtualDriverApp 用 uint16(value * 100) 输出压力/流量。
+  flow_scale: 100
+  registers:
+    p1_flow: 1
+    n1_flow: 3
+    p2_flow: 5
+    n2_flow: 7
+
+# 输出侧：本程序作为 Modbus TCP 主站，使用功能码 16 写目标设备。
+output:
+  endpoint: "127.0.0.1:502"
+  unit_id: 1
+  timeout: 500ms
+  reconnect_initial: 100ms
+  reconnect_max: 2s
+
+  # 4xxxx_one_based: 41005 会换算为协议 PDU 地址 1004。
+  # raw_zero_based:   YAML 中直接填写协议 PDU 的 0 基地址。
+  register_notation: 4xxxx_one_based
+
+  # 每个输出参数占两个 16 位寄存器。默认采用 IEEE-754 float32。
+  # type 还可设为 uint32_scaled 或 int32_scaled；此时实际整数=值*scale。
+  encoding:
+    type: float32
+    scale: 100
+    byte_order: big
+    word_order: high_first
+
+  mappings:
+    s1:
+      mode: 41001
+      current_a: 41003
+      positive_flow_m3h: 41005
+      negative_flow_m3h: 41007
+    s2:
+      mode: 42001
+      current_a: 42003
+      positive_flow_m3h: 42005
+      negative_flow_m3h: 42007
+
+# 注意：mode/current_a 的数据源是 Main Power，本适配器只登记其地址，
+# 不会写这四个字段，避免覆盖主电源设备的数据。
